@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:aop="http://www.springframework.org/schema/aop" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:tx="http://www.springframework.org/schema/tx" xmlns:task="http://www.springframework.org/schema/task"
+	xmlns:util="http://www.springframework.org/schema/util" xmlns:batch="http://www.springframework.org/schema/batch"
+	xsi:schemaLocation="  
+             http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.0.xsd  
+             http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-4.0.xsd  
+             http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.0.xsd  
+             http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.0.xsd  
+             http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.0.xsd  
+             http://www.springframework.org/schema/batch http://www.springframework.org/schema/batch/spring-batch-2.2.xsd  
+             http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-4.0.xsd">
+        
+	<import resource="../Config/spring-context-orm.xml" />
+
+    <!-- 
+        
+            System Name     :Post Dragon
+            Sub system Name :Interface
+            Function ID     :PST_DRG_I000004
+            Module          :Spec Master 
+     -->
+	<batch:job id="I000004">
+		<batch:listeners>
+			<batch:listener ref="b000001jobExecutionListener" />
+		</batch:listeners>
+        <!--  Extract the unprocessed data with [P0001] -->
+		<batch:step id="step1"> 
+			<batch:tasklet>
+
+				<batch:listeners>
+					<batch:listener ref="b000001failureLoggerListener">
+
+					</batch:listener>
+				</batch:listeners>
+				<batch:chunk reader="eimReader" processor="eimProcessor"
+					writer="eimWriter" commit-interval="10000">
+                 
+				</batch:chunk>
+                
+			</batch:tasklet>
+			
+			<batch:next on="FAILED" to="Fail" />
+			<batch:next on="COMPLETED" to="Success"/>
+		</batch:step>
+       <!-- Update the overall status incase of any Exception Common File Header [P0003] -->
+        <batch:step id="Fail">
+	       <batch:tasklet>
+	           <batch:chunk reader="cmnHeaderReader" processor="cmnHeaderProcessor"
+	                    writer="eimWriter"  commit-interval="10000">
+	           </batch:chunk>
+	       </batch:tasklet>
+    
+        </batch:step>
+        <!-- Update the overall status into Common File Header [P0003]  -->
+        <batch:step id="Success">
+           <batch:tasklet>
+               <batch:chunk reader="cmnHeaderReader" processor="cmnHeaderProcessor"
+                        writer="eimWriter"  commit-interval="10000">
+               </batch:chunk>
+           </batch:tasklet>
+    
+        </batch:step>
+	</batch:job>
+	
+	<bean id="b000001failureLoggerListener"
+		class="com.nissangroups.pd.listeners.CommonFailureLoggerListener"></bean>
+	<bean id="b000001jobExecutionListener"
+		class="com.nissangroups.pd.listeners.CommonJobExecutionListener">
+	</bean>
+
+	<bean id="eimReader"
+		class="org.springframework.batch.item.database.JpaPagingItemReader"
+		scope="step">
+		<property name="entityManagerFactory" ref="entityManagerFactory"></property>
+		<property name="queryProvider" ref="i004Extraction"></property>
+	</bean>
+	<bean id="eimProcessor" class="com.nissangroups.pd.processor.I000004Processor">
+          
+	</bean>
+	<bean id="eimWriter" class="org.springframework.batch.item.database.JpaItemWriter">
+		<property name="entityManagerFactory" ref="entityManagerFactory"></property>
+
+	</bean>
+	<bean id="i004Extraction"
+		class="org.springframework.batch.item.database.orm.JpaNativeQueryProvider"
+		scope="step">
+		<property name="sqlQuery"
+			value="SELECT c.SEQ_NO,c.IF_FILE_ID,c.COL1,c.COL2,c.COL3,c.COL4,c.COL5,c.COL6,c.COL7,c.COL8,c.COL9,c.COL10,
+c.COL11,c.COL12,c.COL13,c.COL14,c.COL15,c.COL16,c.COL17,c.COL18,c.COL19,c.COL20 FROM CMN_INTERFACE_DATA c 
+WHERE c.IF_FILE_ID = '#{jobParameters['fileID']}'AND c.SEQ_NO in (SELECT c.SEQ_NO FROM CMN_FILE_HDR c WHERE c.IF_FILE_ID = '#{jobParameters['fileID']}' AND c.STTS = 'U') order by c.SEQ_NO,c.ROW_NO">
+		</property>
+		<property name="entityClass" value="com.nissangroups.pd.mapper.I000004Mapper"></property>
+	</bean>
+	
+	<bean id="cmnHeaderReader" class="org.springframework.batch.item.database.JpaPagingItemReader"
+           scope="step">
+       <property name="entityManagerFactory" ref="entityManagerFactory"></property>
+       <property name="queryString" value="SELECT c FROM CmnFileHdr c where c.id.seqNo in (select c.id.seqNo FROM CmnFileHdr c, CmnInterfaceData d where c.id.seqNo = d.id.seqNo) and  c.id.ifFileId='#{jobParameters['fileID']}' and c.stts = 'U'"></property>
+    </bean> 
+    
+  <bean id="cmnHeaderProcessor" class="com.nissangroups.pd.processor.CMNHeaderProcess" scope="step"></bean>
+
+<bean id="weekNoCalendarRepositoryObj" class="com.nissangroups.pd.repository.WeekNoCalendarRepository">
+    </bean>
+    
+</beans> 

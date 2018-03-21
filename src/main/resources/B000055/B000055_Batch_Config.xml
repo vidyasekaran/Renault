@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:aop="http://www.springframework.org/schema/aop" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:tx="http://www.springframework.org/schema/tx" xmlns:task="http://www.springframework.org/schema/task"
+	xmlns:util="http://www.springframework.org/schema/util" xmlns:batch="http://www.springframework.org/schema/batch"
+	xsi:schemaLocation="  
+             http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.0.xsd  
+             http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-4.0.xsd  
+             http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.0.xsd  
+             http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.0.xsd  
+             http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.0.xsd  
+             http://www.springframework.org/schema/batch http://www.springframework.org/schema/batch/spring-batch-2.2.xsd  
+             http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-4.0.xsd">
+
+	<import resource="../Config/spring-context-orm.xml" />
+	<context:component-scan base-package="com.nissangroups.pd"></context:component-scan>
+	<context:annotation-config></context:annotation-config>
+	<tx:annotation-driven transaction-manager="transactionManager" />
+	 <bean id="entityManagerFactory"  
+         class="org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean" lazy-init="true">  
+          <property name="persistenceXmlLocation" value="classpath:./META-INF/persistence.xml"/>   
+         <property name="persistenceUnitName" value="default" />  
+         <property name="dataSource" ref="dataSource" /> 
+         
+         <property name="jpaVendorAdapter">  
+             <bean class="org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter">  
+                 <property name="showSql" value="false" />  
+                 <property name="generateDdl" value="false" />  
+                 <property name="databasePlatform" value="org.hibernate.dialect.Oracle10gDialect" />  
+             </bean>  
+         </property>  
+     </bean> 
+     
+	<bean id="transactionManager" class="org.springframework.orm.jpa.JpaTransactionManager">
+		<property name="entityManagerFactory" ref="entityManagerFactory" />
+		<property name="dataSource" ref="dataSource" />
+	</bean>
+	<bean id="persistenceAnnotation"
+		class="org.springframework.orm.jpa.support.PersistenceAnnotationBeanPostProcessor" />
+	
+	<bean id="jobRepository"
+		class="org.springframework.batch.core.repository.support.MapJobRepositoryFactoryBean">
+		<property name="transactionManager" ref="transactionManager" />
+		<property name="isolationLevelForCreate" value="ISOLATION_DEFAULT" />
+	</bean>
+	
+	<bean id="b000055Repository" class="com.nissangroups.pd.b000055.repository.BatchScheduleRepository">
+	</bean>
+	<bean id="b00055Processor" class="com.nissangroups.pd.b000055.processor.B000055Processor">
+	</bean>
+	<bean id="commonUtil" class="com.nissangroups.pd.util.CommonUtil">
+	</bean>
+	<bean id="jobStrmShdlTrnRepository" class="com.nissangroups.pd.repository.JobStrmShdlTrnRepository"></bean>
+	
+</beans> 

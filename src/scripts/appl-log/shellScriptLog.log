@@ -1,0 +1,93 @@
+
+/home/cp200135/appl-pgm/batch/scripts/B000001.sh   - JOB EXECUTION STARTED - Arguments : GOD GRACE  PID :  11242   
+/home/cp200135/appl-pgm/batch/scripts/B000001.sh   - JOB EXECUTION ENDED   - Arguments : GOD GRACE  PID :  11242   
+/home/cp200135/appl-pgm/batch/scripts/B000001.sh 12:37:19  - JOB EXECUTION STARTED - Arguments : GOD GRACE  PID :  11291   
+/home/cp200135/appl-pgm/batch/scripts/B000001.sh   - JOB EXECUTION ENDED   - Arguments : GOD GRACE  PID :  11291   
+/home/cp200135/appl-pgm/batch/scripts/B000001.sh 12:37:54  - JOB EXECUTION STARTED - Arguments : GOD GRACE  PID :  11324   
+/home/cp200135/appl-pgm/batch/scripts/B000001.sh 12:38:03  - JOB EXECUTION ENDED   - Arguments : GOD GRACE  PID :  11324   
+/home/cp200135/appl-pgm/batch/scripts/B000001.sh   - JOB EXECUTION STARTED - Arguments : GOD GRACE  PID :  12436   
+/home/cp200135/appl-pgm/batch/scripts/B000001.sh 16:45:45  - JOB EXECUTION ENDED   - Arguments : GOD GRACE  PID :  12436   
+/home/cp200135/appl-pgm/batch/scripts/B000001.sh   - JOB EXECUTION STARTED - Arguments : GOD GRACE  PID :  12473   
+/home/cp200135/appl-pgm/batch/scripts/B000001.sh 16:46:23  - JOB EXECUTION ENDED   - Arguments : GOD GRACE  PID :  12473   
+/home/cp200135/appl-pgm/batch/scripts/B000001.sh 15:09:48  - JOB EXECUTION STARTED - Arguments :  PID :  22478   
+/home/cp200135/appl-pgm/batch/scripts/B000001.sh 15:09:49  - JOB EXECUTION ENDED   - Arguments :  PID :  22478   
+/home/cp200135/appl-pgm/batch/scripts/B000001.sh 15:10:47  - JOB EXECUTION STARTED - Arguments :  PID :  22502   
+/home/cp200135/appl-pgm/batch/scripts/B000001.sh 15:10:49  - JOB EXECUTION ENDED   - Arguments :  PID :  22502   
+/home/cp200135/appl-pgm/batch/scripts/B000001.sh 15:20:15  - JOB EXECUTION STARTED - Arguments :  PID :  22573   
+/home/cp200135/appl-pgm/batch/scripts/B000001.sh 15:20:17  - JOB EXECUTION ENDED   - Arguments :  PID :  22573   
+/home/cp200135/appl-pgm/batch/scripts/B000002.sh 15:24:28  - JOB EXECUTION STARTED - Arguments :  PID :  22602   
+/home/cp200135/appl-pgm/batch/scripts/B000002.sh 15:24:29  - JOB EXECUTION ENDED   - Arguments :  PID :  22602   
+/home/cp200135/appl-pgm/batch/scripts/B000003.sh 15:24:59  - JOB EXECUTION STARTED - Arguments :  PID :  22622   
+/home/cp200135/appl-pgm/batch/scripts/B000003.sh 15:25:01  - JOB EXECUTION ENDED   - Arguments :  PID :  22622   
+/home/cp200135/appl-pgm/batch/scripts/B000001.sh 15:27:31  - JOB EXECUTION STARTED - Arguments :  PID :  22646   
+/home/cp200135/appl-pgm/batch/scripts/B000001.sh 15:27:34  - JOB EXECUTION ENDED   - Arguments :  PID :  22646   
+/home/cp200135/appl-pgm/batch/scripts/B000005.sh 15:34:48  - JOB EXECUTION STARTED - Arguments :  PID :  22680   
+/home/cp200135/appl-pgm/batch/scripts/B000005.sh 15:34:49  - JOB EXECUTION ENDED   - Arguments :  PID :  22680   
+/home/cp200135/appl-pgm/batch/scripts/B000007.sh 15:38:05  - JOB EXECUTION STARTED - Arguments :  PID :  22704   
+/home/cp200135/appl-pgm/batch/scripts/B000007.sh 15:38:07  - JOB EXECUTION ENDED   - Arguments :  PID :  22704   
+/home/cp200135/appl-pgm/batch/scripts/B000007.sh 15:43:59  - JOB EXECUTION STARTED - Arguments :  PID :  22740   
+/home/cp200135/appl-pgm/batch/scripts/B000007.sh 15:44:02  - JOB EXECUTION ENDED   - Arguments :  PID :  22740   
+/home/cp200135/appl-pgm/interface/scripts/I000004.sh 15:44:37  - JOB EXECUTION STARTED - Arguments :  PID :  22759   
+/home/cp200135/appl-pgm/interface/scripts/I000004.sh 15:44:37  - JOB EXECUTION ENDED   - Arguments :  PID :  22759   
+/home/cp200135/appl-pgm/interface/scripts/I000004.sh 15:44:42  - JOB EXECUTION STARTED - Arguments : 1  PID :  22777   
+/home/cp200135/appl-pgm/interface/scripts/I000004.sh 15:44:45  - JOB EXECUTION ENDED   - Arguments : 1  PID :  22777   
+/home/cp200135/appl-pgm/interface/scripts/I000005.sh 15:44:53  - JOB EXECUTION STARTED - Arguments :  PID :  22798   
+/home/cp200135/appl-pgm/interface/scripts/I000005.sh 15:44:56  - JOB EXECUTION ENDED   - Arguments :  PID :  22798   
+/home/cp200135/appl-pgm/batch/scripts/B000001.sh 18:31:52  - JOB EXECUTION STARTED - Arguments :  PID :  23243   
+/home/cp200135/appl-pgm/batch/scripts/B000001.sh 18:32:01  - JOB EXECUTION ENDED   - Arguments :  PID :  23243   
+/home/cp200135/appl-pgm/batch/scripts/B000001.sh 18:37:05  - JOB EXECUTION STARTED - Arguments :  PID :  23281   
+/home/cp200135/appl-pgm/batch/scripts/B000001.sh 18:37:13  - JOB EXECUTION ENDED   - Arguments :  PID :  23281   
+/home/cp200135/appl-pgm/interface/scripts/I000004.sh 18:47:24  - JOB EXECUTION STARTED - Arguments : I004  PID :  23339   
+/home/cp200135/appl-pgm/interface/scripts/I000004.sh 18:47:38  - JOB EXECUTION ENDED   - Arguments : I004  PID :  23339   
+/home/cp200135/appl-pgm/batch/scripts/B000001.sh 22:55:29  - JOB EXECUTION STARTED - Arguments :  PID :  23984   
+/home/cp200135/appl-pgm/batch/scripts/B000001.sh 22:55:38  - JOB EXECUTION ENDED   - Arguments :  PID :  23984   
+/home/cp200135/appl-pgm/batch/scripts/B000001.sh 09:37:29  - JOB EXECUTION STARTED - Arguments :  PID :  25843   
+/home/cp200135/appl-pgm/batch/scripts/B000001.sh 09:37:38  - JOB EXECUTION ENDED   - Arguments :  PID :  25843   
+/home/cp200135/appl-pgm/batch/scripts/B000005.sh 09:38:03  - JOB EXECUTION STARTED - Arguments : 20 0 B4  PID :  25863   
+/home/cp200135/appl-pgm/batch/scripts/B000005.sh 09:38:09  - JOB EXECUTION ENDED   - Arguments : 20 0 B4  PID :  25863   
+/home/cp200135/appl-pgm/batch/scripts/B000005.sh 09:38:47  - JOB EXECUTION STARTED - Arguments : 20 0 B5  PID :  25884   
+/home/cp200135/appl-pgm/batch/scripts/B000005.sh 09:38:53  - JOB EXECUTION ENDED   - Arguments : 20 0 B5  PID :  25884   
+/home/cp200135/appl-pgm/batch/scripts/B000007.sh 09:40:11  - JOB EXECUTION STARTED - Arguments : 20 FROZEN_CREATION_LIMIT 1  PID :  25909   
+/home/cp200135/appl-pgm/batch/scripts/B000007.sh 09:40:16  - JOB EXECUTION ENDED   - Arguments : 20 FROZEN_CREATION_LIMIT 1  PID :  25909   
+/home/cp200135/appl-pgm/batch/scripts/B000007.sh 09:41:02  - JOB EXECUTION STARTED - Arguments : 20 FROZEN_CREATION_LIMIT 1  PID :  25928   
+/home/cp200135/appl-pgm/batch/scripts/B000007.sh 09:41:18  - JOB EXECUTION ENDED   - Arguments : 20 FROZEN_CREATION_LIMIT 1  PID :  25928   
+/home/cp200135/appl-pgm/interface/scripts/I000004.sh 09:43:03  - JOB EXECUTION STARTED - Arguments : I004  PID :  25952   
+/home/cp200135/appl-pgm/interface/scripts/I000004.sh 09:43:08  - JOB EXECUTION ENDED   - Arguments : I004  PID :  25952   
+/home/cp200135/appl-pgm/interface/scripts/I000008.sh 09:43:51  - JOB EXECUTION STARTED - Arguments : EURO01 P1  PID :  25976   
+/home/cp200135/appl-pgm/interface/scripts/I000008.sh 09:45:02  - JOB EXECUTION ENDED   - Arguments : EURO01 P1  PID :  25976   
+/home/cp200135/appl-pgm/interface/scripts/I000008.sh 09:45:53  - JOB EXECUTION STARTED - Arguments : EURO01 P1  PID :  25997   
+/home/cp200135/appl-pgm/interface/scripts/I000008.sh 09:46:27  - JOB EXECUTION ENDED   - Arguments : EURO01 P1  PID :  25997   
+/home/cp200135/appl-pgm/interface/scripts/I000004.sh 09:47:49  - JOB EXECUTION STARTED - Arguments : I004  PID :  26021   
+/home/cp200135/appl-pgm/interface/scripts/I000004.sh 09:47:54  - JOB EXECUTION ENDED   - Arguments : I004  PID :  26021   
+/home/cp200135/appl-pgm/batch/scripts/B000005.sh 09:49:14  - JOB EXECUTION STARTED - Arguments : 20 0 B4  PID :  26044   
+/home/cp200135/appl-pgm/batch/scripts/B000005.sh 09:49:19  - JOB EXECUTION ENDED   - Arguments : 20 0 B4  PID :  26044   
+/home/cp200135/appl-pgm/batch/scripts/B000007.sh 09:52:52  - JOB EXECUTION STARTED - Arguments : 20 FROZEN_CREATION_LIMIT 1  PID :  26072   
+/home/cp200135/appl-pgm/batch/scripts/B000007.sh 09:52:58  - JOB EXECUTION ENDED   - Arguments : 20 FROZEN_CREATION_LIMIT 1  PID :  26072   
+/home/cp200135/appl-pgm/batch/scripts/B000007.sh 10:11:12  - JOB EXECUTION STARTED - Arguments : 20 FROZEN_CREATION_LIMIT 1  PID :  26139   
+/home/cp200135/appl-pgm/batch/scripts/B000007.sh 10:11:17  - JOB EXECUTION ENDED   - Arguments : 20 FROZEN_CREATION_LIMIT 1  PID :  26139   
+/home/cp200135/appl-pgm/batch/scripts/B000007.sh 10:35:04  - JOB EXECUTION STARTED - Arguments : 20 FROZEN_CREATION_LIMIT 1  PID :  26217   
+/home/cp200135/appl-pgm/batch/scripts/B000007.sh 10:35:10  - JOB EXECUTION ENDED   - Arguments : 20 FROZEN_CREATION_LIMIT 1  PID :  26217   
+/home/cp200135/appl-pgm/batch/scripts/B000007.sh 10:37:01  - JOB EXECUTION STARTED - Arguments : 20 'FROZEN_CREATION_LIMIT' 1  PID :  26238   
+/home/cp200135/appl-pgm/batch/scripts/B000007.sh 10:37:07  - JOB EXECUTION ENDED   - Arguments : 20 'FROZEN_CREATION_LIMIT' 1  PID :  26238   
+/home/cp200135/appl-pgm/batch/scripts/B000007.sh 10:40:02  - JOB EXECUTION STARTED - Arguments : 6 'FROZEN_CREATION_LIMIT' 1  PID :  26266   
+/home/cp200135/appl-pgm/batch/scripts/B000007.sh 10:40:08  - JOB EXECUTION ENDED   - Arguments : 6 'FROZEN_CREATION_LIMIT' 1  PID :  26266   
+/home/cp200135/appl-pgm/batch/scripts/B000007.sh 10:46:15  - JOB EXECUTION STARTED - Arguments : 6 'FROZEN_CREATION_LIMIT' 1  PID :  26313   
+/home/cp200135/appl-pgm/batch/scripts/B000007.sh 10:46:22  - JOB EXECUTION ENDED   - Arguments : 6 'FROZEN_CREATION_LIMIT' 1  PID :  26313   
+/home/cp200135/appl-pgm/batch/scripts/B000007.sh 10:46:33  - JOB EXECUTION STARTED - Arguments : 6 'FROZEN_CREATION_LIMIT' 1  PID :  26332   
+/home/cp200135/appl-pgm/batch/scripts/B000007.sh 10:46:59  - JOB EXECUTION ENDED   - Arguments : 6 'FROZEN_CREATION_LIMIT' 1  PID :  26332   
+/home/cp200135/appl-pgm/batch/scripts/B000007.sh 11:26:55  - JOB EXECUTION STARTED - Arguments : 6 'FROZEN_CREATION_LIMIT' 1  PID :  26459   
+/home/cp200135/appl-pgm/batch/scripts/B000007.sh 11:27:14  - JOB EXECUTION ENDED   - Arguments : 6 'FROZEN_CREATION_LIMIT' 1  PID :  26459   
+/home/cp200135/appl-pgm/batch/scripts/B000007.sh 11:27:51  - JOB EXECUTION STARTED - Arguments : 20 'FROZEN_CREATION_LIMIT' 1  PID :  26481   
+/home/cp200135/appl-pgm/batch/scripts/B000007.sh 11:27:57  - JOB EXECUTION ENDED   - Arguments : 20 'FROZEN_CREATION_LIMIT' 1  PID :  26481   
+/home/cp200135/appl-pgm/interface/scripts/I000008.sh 11:29:09  - JOB EXECUTION STARTED - Arguments :  PID :  26503   
+/home/cp200135/appl-pgm/interface/scripts/I000008.sh 11:29:09  - JOB EXECUTION ENDED   - Arguments :  PID :  26503   
+/home/cp200135/appl-pgm/interface/scripts/I000008.sh 11:29:26  - JOB EXECUTION STARTED - Arguments : EURO01 P1  PID :  26521   
+/home/cp200135/appl-pgm/interface/scripts/I000008.sh 11:29:35  - JOB EXECUTION ENDED   - Arguments : EURO01 P1  PID :  26521   
+/home/cp200135/appl-pgm/interface/scripts/I000008.sh 11:30:33  - JOB EXECUTION STARTED - Arguments : EURO01 P1  PID :  26545   
+/home/cp200135/appl-pgm/interface/scripts/I000008.sh 11:30:44  - JOB EXECUTION ENDED   - Arguments : EURO01 P1  PID :  26545   
+/home/cp200135/appl-pgm/interface/scripts/I000008.sh 11:59:25  - JOB EXECUTION STARTED - Arguments : EURO01 P1  PID :  26626   
+/home/cp200135/appl-pgm/interface/scripts/I000008.sh 11:59:37  - JOB EXECUTION ENDED   - Arguments : EURO01 P1  PID :  26626   
+./B000001.sh 15:27:34  - JOB EXECUTION STARTED - Arguments :  PID :  27262   
+./B000001.sh 15:27:43  - JOB EXECUTION ENDED   - Arguments :  PID :  27262   
+./B000001.sh 15:36:18  - JOB EXECUTION STARTED - Arguments :  PID :  27303   
+./B000001.sh 15:36:38  - JOB EXECUTION ENDED   - Arguments :  PID :  27303   

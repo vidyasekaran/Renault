@@ -1,0 +1,87 @@
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:aop="http://www.springframework.org/schema/aop" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:tx="http://www.springframework.org/schema/tx" xmlns:task="http://www.springframework.org/schema/task"
+	xmlns:util="http://www.springframework.org/schema/util" xmlns:batch="http://www.springframework.org/schema/batch"
+	xsi:schemaLocation="  
+             http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.0.xsd  
+             http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-4.0.xsd  
+             http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.0.xsd  
+             http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.0.xsd  
+             http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.0.xsd  
+             http://www.springframework.org/schema/batch http://www.springframework.org/schema/batch/spring-batch-2.2.xsd  
+             http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-4.0.xsd">
+
+	<import resource="../Config/spring-context-orm.xml" />
+	<bean id="transactionManager" class="org.springframework.orm.jpa.JpaTransactionManager">
+		<property name="entityManagerFactory" ref="entityManagerFactory" />
+		<property name="dataSource" ref="dataSource" />
+	</bean>
+	<bean id="persistenceAnnotation"
+		class="org.springframework.orm.jpa.support.PersistenceAnnotationBeanPostProcessor" />
+	<tx:annotation-driven transaction-manager="transactionManager" />
+	<bean id="jobRepository"
+		class="org.springframework.batch.core.repository.support.MapJobRepositoryFactoryBean">
+		<property name="transactionManager" ref="transactionManager" />
+		<property name="isolationLevelForCreate" value="ISOLATION_DEFAULT" />
+	</bean>
+	<bean id="jobLauncher"
+		class="org.springframework.batch.core.launch.support.SimpleJobLauncher">
+		<property name="jobRepository" ref="jobRepository" />
+	</bean>
+	<bean id="b000005failureLoggerListener"
+		class="com.nissangroups.pd.listeners.CommonFailureLoggerListener"></bean>
+	<bean id="b000005jobExecutionListener"
+		class="com.nissangroups.pd.listeners.CommonJobExecutionListener">
+	</bean>
+	<batch:job id="B000053">
+	
+	<batch:listeners>
+			<batch:listener ref="b000005jobExecutionListener" />
+		</batch:listeners>
+		<!-- Reader in this step used to extract the count of weekly_batch_process_status -->
+	
+	<batch:step id="step1">
+			<batch:tasklet>
+				<batch:listeners>
+					<batch:listener ref="b000005failureLoggerListener">
+					</batch:listener>
+				</batch:listeners>
+				<batch:chunk reader="b000053reader" processor="b000053BatchProcessor"
+					writer="noOpItemWriter" chunk-completion-policy="completionPolicy" />
+			</batch:tasklet>
+			
+		</batch:step>
+		
+		
+		
+	</batch:job>
+	
+	<bean id="b000053reader"
+		class="org.springframework.batch.item.database.JpaPagingItemReader"
+		scope="step">
+		<property name="entityManagerFactory" ref="entityManagerFactory"></property>
+		<property name="queryString" value="SELECT COUNT(*) FROM WklyBatchProcessStt s WHERE s.id.porCd='#{jobParameters['POR_CD']}' AND s.id.ordrTakeBaseMnth='#{jobParameters['ordrTakeBaseMonth']}' AND s.id.ordrTakeBaseWkNo='#{jobParameters['ordrTakeBaseWeekNo']}' AND s.id.batchId='#{jobParameters['batchId']}' AND s.id.seqId='#{jobParameters['sequenceId']}'">
+		</property>
+	</bean>
+	
+	<bean id="b000053BatchProcessor"
+		class="com.nissangroups.pd.b000053.processor.B000053Processor"
+		scope="step">
+		<property name="porCd" value="#{jobParameters['POR_CD']}" />
+		<property name="ordrTakeBaseMonth" value="#{jobParameters['ordrTakeBaseMonth']}" />
+		<property name="ordrTakeBaseWeekNo" value="#{jobParameters['ordrTakeBaseWeekNo']}" />
+		<property name="batchId" value="#{jobParameters['batchId']}" />
+		<property name="seqId" value="#{jobParameters['sequenceId']}" />
+		
+	</bean>
+	
+	<bean id="completionPolicy"
+		class="org.springframework.batch.repeat.policy.DefaultResultCompletionPolicy"></bean>
+	
+	
+	<bean id="extractWeeklyTrigger" class="com.nissangroups.pd.b000053.process.TriggerWklyBatchProcess"></bean>
+	<bean id="PplProcessRepo" class="com.nissangroups.pd.repository.PipelineProcessRepository"></bean>
+	
+	
+	</beans>

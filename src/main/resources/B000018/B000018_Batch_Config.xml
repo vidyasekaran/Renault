@@ -1,0 +1,286 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:p="http://www.springframework.org/schema/p"
+    xmlns:aop="http://www.springframework.org/schema/aop" xmlns:context="http://www.springframework.org/schema/context"
+    xmlns:tx="http://www.springframework.org/schema/tx" xmlns:task="http://www.springframework.org/schema/task"
+    xmlns:util="http://www.springframework.org/schema/util" xmlns:batch="http://www.springframework.org/schema/batch"
+    xsi:schemaLocation="  
+             http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.0.xsd  
+             http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-4.0.xsd  
+             http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.0.xsd  
+             http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.0.xsd  
+             http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.0.xsd  
+             http://www.springframework.org/schema/batch http://www.springframework.org/schema/batch/spring-batch-2.2.xsd  
+             http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-4.0.xsd">
+
+    <import resource="../Config/spring-context-orm.xml" />
+    
+    
+    <bean id="failureLoggerListener"
+        class="com.nissangroups.pd.listeners.CommonFailureLoggerListener"></bean>
+    <bean id="jobExecutionListener"
+        class="com.nissangroups.pd.listeners.CommonJobExecutionListener">
+    </bean>
+    
+    
+    <batch:job id="B000018">
+        <batch:listeners>
+            <batch:listener ref="jobExecutionListener" />
+
+        </batch:listeners>
+        <batch:step id="step1" >
+            <batch:tasklet>
+                <batch:listeners>
+                    <batch:listener ref="failureLoggerListener">
+    
+                  
+                  </batch:listener>
+    				
+                </batch:listeners>
+                <batch:chunk reader="mnthlyOrdrIFTrnReader" processor="compositeItemProcessor"
+                    writer="NoOpItemWriter" commit-interval="1000"  />
+                                        
+            </batch:tasklet>
+
+        </batch:step>
+        
+    </batch:job>
+
+
+    
+    <bean id="compositeItemProcessor"
+        class="org.springframework.batch.item.support.CompositeItemProcessor"
+        scope="step">
+        <property name="delegates">
+            <util:list>
+            	<ref bean="SingleRecordProcessor" />
+            	
+            	<ref bean="porVldnProcessor" />
+             	<ref bean="DplctChkProcessor" />
+             	<ref bean="OrdrTkBsPeriodTypVldnProcessor" />
+                <ref bean="PrdPeriodTypVldnProcessor" />
+                
+                <ref bean="AttchByrGrpCdProcessor" />
+                <ref bean="OrdrTkBsMnthVldnProcessor" />
+                
+            	<ref bean="ByrCdVldnProcessor" />
+            	<ref bean="carSrsVldnProcessor" />
+            	
+            	<ref bean="SysLockChkProcessor" />
+                <ref bean="EndItmVldnProcessor" />
+                <ref bean="AdtnlSpecCdVldnProcessor" />
+                <ref bean="SpecDestCdVldnProcessor" />
+    			<ref bean="ClrCdVldnProcessor" />
+                <ref bean="PotCdVldnProcessor" />
+                
+                <ref bean="AttchOseiIdProcessor" />
+         
+                <ref bean="PrdMnthVldnProcessor" />
+                
+                <ref bean="DueDateVldnProcessor" />
+                
+            	<ref bean="AttchFrznTypeProcessor" />
+            	 
+            	<ref bean="FullFrznChkProcessor" />
+                <ref bean="PartialFrznChkProcessor" />
+                <ref bean="ExtClrFrznChkProcessor" />
+                <ref bean="IntClrFrznChkProcessor" />
+                <ref bean="SpecDestFrznChkProcessor" />
+                
+                <ref bean="MnthlyOrdrTrnProcessor" />
+                
+            	<ref bean="ByrMnthlyOcfUsgProcessor" />
+            	<ref bean="ByrGrpMnthlyOcfLmtProcessor" />
+            	<ref bean="RegionalMnthlyOcfLmtProcessor" />
+            	
+            	<ref bean="ManuelDueDateProcessor"/>
+				
+				<ref bean="ErrorReportProcessor" />
+            	 
+				<ref bean="DltFileProcessor"/>
+            	
+            </util:list>
+        </property>
+    </bean>
+    
+    
+	    
+    <bean id="DltFileProcessor" class="com.nissangroups.pd.b000018.processor.DltFileProcessor"
+        scope="step">
+    </bean>
+    
+    <bean id="ErrorReportProcessor" class="com.nissangroups.pd.b000018.processor.ErrorReportProcessor"
+        scope="step">
+    </bean>
+    
+    <bean id="RegionalMnthlyOcfLmtProcessor" class="com.nissangroups.pd.b000018.processor.RegionalMnthlyOcfLmtProcessor"
+        scope="step">
+    </bean>
+    
+    
+    <bean id="ByrGrpMnthlyOcfLmtProcessor" class="com.nissangroups.pd.b000018.processor.ByrGrpMnthlyOcfLmtProcessor"
+        scope="step">
+    </bean>
+    
+    <bean id="ByrMnthlyOcfUsgProcessor" class="com.nissangroups.pd.b000018.processor.ByrMnthlyOcfUsgProcessor"
+        scope="step">
+    </bean>
+    
+    
+    <bean id="AttchByrGrpCdProcessor" class="com.nissangroups.pd.b000018.processor.AttchByrGrpCdProcessor"
+        scope="step">
+    </bean>
+    
+    
+    
+    <bean id="ManuelDueDateProcessor" class="com.nissangroups.pd.b000018.processor.ManuelDueDateProcessor"
+        scope="step">
+    </bean>
+    
+    <bean id="MnthlyOrdrTrnProcessor" class="com.nissangroups.pd.b000018.processor.MnthlyOrdrTrnProcessor"
+        scope="step">
+    </bean>
+    
+    <bean id="AttchOseiIdProcessor" class="com.nissangroups.pd.b000018.processor.AttchOseiIdProcessor"
+        scope="step">
+    </bean>
+    
+    <bean id="AttchFrznTypeProcessor" class="com.nissangroups.pd.b000018.processor.AttchFrznTypeProcessor"
+        scope="step">
+    </bean>
+  
+	<bean id="FullFrznChkProcessor" class="com.nissangroups.pd.b000018.processor.FullFrznChkProcessor" scope="step">
+    </bean>
+    <bean id="PartialFrznChkProcessor" class="com.nissangroups.pd.b000018.processor.PartialFrznChkProcessor" scope="step">
+    </bean>
+    <bean id="ExtClrFrznChkProcessor" class="com.nissangroups.pd.b000018.processor.ExtClrFrznChkProcessor" scope="step">
+    </bean>
+    <bean id="IntClrFrznChkProcessor" class="com.nissangroups.pd.b000018.processor.IntClrFrznChkProcessor" scope="step">
+    </bean>
+    <bean id="SpecDestFrznChkProcessor" class="com.nissangroups.pd.b000018.processor.SpecDestFrznChkProcessor" scope="step">
+    </bean>        
+    <bean id="porVldnProcessor" class="com.nissangroups.pd.b000018.processor.PorVldnProcessor"
+        scope="step">
+            
+        <property name="errorCd" value="01" />
+        
+    </bean>
+    
+    <bean id="SingleRecordProcessor" class="com.nissangroups.pd.b000018.processor.SingleRecordProcessor"
+        scope="step">
+            
+        <property name="porCd" value="#{jobParameters['porCd']}" />
+        <property name="singleRecordFlag" value="#{jobParameters['snglRcrdFlg']}" />
+        <property name="fileId" value="#{jobParameters['FileID']}" />
+        <property name="prdOrdrStgCd" value="#{jobParameters['productionOrderStageCD']}" />
+        <property name="tableName" value="TRN_MNTHLY_ORDR_IF" />
+    </bean>
+    
+    			
+    <bean id="carSrsVldnProcessor" class="com.nissangroups.pd.b000018.processor.CarSrsVldnProcessor" scope="step">
+    	<property name="errorCd" value="06" />
+    </bean>
+
+    <bean id="ByrCdVldnProcessor" class="com.nissangroups.pd.b000018.processor.ByrCdVldnProcessor" scope="step">
+    <property name="errorCd" value="05" />
+    </bean>
+	
+	<bean id="EndItmVldnProcessor" class="com.nissangroups.pd.b000018.processor.EndItmVldnProcessor" scope="step">
+	<property name="errorCd" value="09" />
+    </bean>
+	
+	<bean id="AdtnlSpecCdVldnProcessor" class="com.nissangroups.pd.b000018.processor.AdtnlSpecCdVldnProcessor" scope="step">
+	<property name="errorCd" value="10" />
+    </bean>
+	
+	<bean id="SpecDestCdVldnProcessor" class="com.nissangroups.pd.b000018.processor.SpecDestCdVldnProcessor" scope="step">
+	<property name="errorCd" value="11" />
+    </bean>
+	
+	<bean id="ClrCdVldnProcessor" class="com.nissangroups.pd.b000018.processor.ClrCdVldnProcessor" scope="step">
+	<property name="errorCd" value="12" />
+    </bean>
+	
+	<bean id="PotCdVldnProcessor" class="com.nissangroups.pd.b000018.processor.PotCdVldnProcessor" scope="step">
+	<property name="errorCd" value="13" />
+    </bean>
+	
+	<bean id="DplctChkProcessor" class="com.nissangroups.pd.b000018.processor.DplctChkProcessor" scope="step">
+	<property name="errorCd" value="02" />
+    </bean>
+    
+    <bean id="OrdrTkBsPeriodTypVldnProcessor" class="com.nissangroups.pd.b000018.processor.OrdrTkBsPeriodTypVldnProcessor" scope="step">
+    <property name="errorCd" value="03" />
+    </bean>
+    
+    <bean id="PrdPeriodTypVldnProcessor" class="com.nissangroups.pd.b000018.processor.PrdPeriodTypVldnProcessor" scope="step">
+    <property name="errorCd" value="04" />
+    </bean>
+    <bean id="OrdrTkBsMnthVldnProcessor" class="com.nissangroups.pd.b000018.processor.OrdrTkBsMnthVldnProcessor" scope="step">
+    <property name="errorCd" value="07" />
+    </bean>
+    <bean id="SysLockChkProcessor" class="com.nissangroups.pd.b000018.processor.SysLockChkProcessor" scope="step">
+    <property name="errorCd" value="08" />
+    </bean>
+    <bean id="DueDateVldnProcessor" class="com.nissangroups.pd.b000018.processor.DueDateVldnProcessor" scope="step">
+    </bean>
+    
+    <bean id="PrdMnthVldnProcessor" class="com.nissangroups.pd.b000018.processor.PrdMnthVldnProcessor"
+        scope="step">
+        <property name="errorCd" value="14" />
+    </bean>
+    
+    
+    <bean id="mnthlyOrdrIFTrnReader"
+        class="org.springframework.batch.item.database.JpaPagingItemReader"
+        scope="step">
+        <property name="entityManagerFactory" ref="entityManagerFactory"></property>
+        <property name="pageSize" value="1"></property>
+        <property name="queryString"
+            value="SELECT min(mnthlyOrdrIfTrn.id.seqNo) FROM TrnMnthlyOrdrIf mnthlyOrdrIfTrn where mnthlyOrdrIfTrn.porCd = '#{jobParameters['porCd']}' and mnthlyOrdrIfTrn.id.ifFileId = '#{jobParameters['FileID']}'"></property>
+
+    </bean>
+    
+    
+    <bean id="NoOpItemWriter" class="com.nissangroups.pd.b000018.writer.NoOpItemWriter"
+        scope="step">
+        
+    </bean>
+    
+    
+    <bean id="ordrTkBsPrdMstRepositoryObj" class="com.nissangroups.pd.repository.OrdrTkBsPrdMstRepository">
+    </bean>
+    
+    <bean id="porVldnRepositoryObj" class="com.nissangroups.pd.repository.VldnRepository">
+    </bean>
+    
+    
+    <bean id="mnthlyOrdrIfTrnRepositoryObj" class="com.nissangroups.pd.repository.MnthlyOrdrIfTrnRepository">
+    </bean>
+    
+    <bean id="mnthlyOrdrTrnRepositoryObj" class="com.nissangroups.pd.repository.MnthlyOrdrTrnRepository">
+    </bean>
+    
+    
+    <bean id="frznVldnRepositoryObj" class="com.nissangroups.pd.repository.FrznVldnRepository">
+    </bean>
+    
+    <bean id="manuelDueDateRepositoryObj" class="com.nissangroups.pd.repository.ManuelDueDateRepository">
+    </bean>
+    
+    
+    <bean id="byrMnthlyOcfUsgRepositoryObj" class="com.nissangroups.pd.repository.ByrMnthlyOcfUsgRepository">
+    </bean>
+    
+    <bean id="byrGrpMnthlyOcfLimitTrnRepositoryObj" class="com.nissangroups.pd.repository.ByrGrpMnthlyOcfLimitTrnRepository">
+    </bean>
+    
+    <bean id="rgnlMnthlyOcfLmtRepositoryObj" class="com.nissangroups.pd.repository.RegionalMnthlyOcfLimitTrnRepository">
+    </bean>
+    
+    
+    <bean id="wkNoCalendarRepositoryObj" class="com.nissangroups.pd.repository.WeekNoCalendarRepository">
+    </bean>
+    
+    
+</beans>

@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:aop="http://www.springframework.org/schema/aop" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:tx="http://www.springframework.org/schema/tx" xmlns:task="http://www.springframework.org/schema/task"
+	xmlns:util="http://www.springframework.org/schema/util" xmlns:batch="http://www.springframework.org/schema/batch"
+	xsi:schemaLocation="  
+             http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.0.xsd  
+             http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-4.0.xsd  
+             http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.0.xsd  
+             http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.0.xsd  
+             http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.0.xsd  
+             http://www.springframework.org/schema/batch http://www.springframework.org/schema/batch/spring-batch-2.2.xsd  
+             http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-4.0.xsd">
+
+	<import resource="../Config/spring-context-orm.xml" />
+	<bean id="transactionManager" class="org.springframework.orm.jpa.JpaTransactionManager">
+		<property name="entityManagerFactory" ref="entityManagerFactory" />
+		<property name="dataSource" ref="dataSource" />
+	</bean>
+	<bean id="persistenceAnnotation"
+		class="org.springframework.orm.jpa.support.PersistenceAnnotationBeanPostProcessor" />
+	<tx:annotation-driven transaction-manager="transactionManager" />
+	<bean id="jobRepository"
+		class="org.springframework.batch.core.repository.support.MapJobRepositoryFactoryBean">
+		<property name="transactionManager" ref="transactionManager" />
+		<property name="isolationLevelForCreate" value="ISOLATION_DEFAULT" />
+	</bean>
+	<bean id="jobLauncher"
+		class="org.springframework.batch.core.launch.support.SimpleJobLauncher">
+		<property name="jobRepository" ref="jobRepository" />
+	</bean>
+
+
+<batch:job id="I000005">
+		<batch:listeners>
+			<batch:listener ref="b000001jobExecutionListener" />
+		</batch:listeners>
+		<batch:step id="I000005step1">
+			<batch:tasklet>
+				<batch:listeners>
+					<batch:listener ref="b000001failureLoggerListener">
+
+					</batch:listener>
+				</batch:listeners>
+				<batch:chunk reader="extractCommonPoolReader" processor="i000005Processor"
+					writer="i000005Writer" commit-interval="10000" />
+			</batch:tasklet>
+			<batch:next on="FAILED" to="Fail" />
+			<batch:next on="COMPLETED" to="Success"/>
+		</batch:step>
+		<batch:step id="Fail">
+	       <batch:tasklet>
+	           <batch:chunk reader="cmnHeaderReader" processor="cmnHeaderProcessor"
+	                    writer="eimWriter"  commit-interval="10000">
+	           </batch:chunk>
+	       </batch:tasklet>
+    
+        </batch:step>
+        <!-- Update the overall status into Common File Header [P0003]  -->
+        <batch:step id="Success">
+           <batch:tasklet>
+               <batch:chunk reader="cmnHeaderReader" processor="cmnHeaderProcessor"
+                        writer="eimWriter"  commit-interval="10000">
+               </batch:chunk>
+           </batch:tasklet>
+    
+        </batch:step>	
+	
+	</batch:job>
+	<bean id="b000001failureLoggerListener"
+		class="com.nissangroups.pd.listeners.CommonFailureLoggerListener"></bean>
+	<bean id="b000001jobExecutionListener"
+		class="com.nissangroups.pd.listeners.CommonJobExecutionListener">
+	</bean>
+	
+	<bean id="extractCommonPoolReader"
+		class="org.springframework.batch.item.database.JpaPagingItemReader"
+		scope="step">
+		<property name="entityManagerFactory" ref="entityManagerFactory"></property>
+		<property name="queryString"
+			value="select m	from CmnInterfaceData m  where m.cmnFileHdr.id.ifFileId='#{jobParameters['INTERFACE_FILE_ID']}'  and m.cmnFileHdr.id.seqNo=(Select min(cm.id.seqNo) from CmnFileHdr cm where cm.cmnInterfaceMst.ifFileId='#{jobParameters['INTERFACE_FILE_ID']}' and cm.stts='#{jobParameters['INTERFACE_STATUS']}'  )">
+		</property>
+	</bean>
+	<bean id="i000005Processor" class="com.nissangroups.pd.processor.I000005Processor"></bean>
+	<bean id="i000005Writer" class="com.nissangroups.pd.writer.I000005CustomWriter">
+	</bean>
+	
+	<!-- Fail & Success -->
+	
+	<bean id="cmnHeaderReader" class="org.springframework.batch.item.database.JpaPagingItemReader"
+           scope="step">
+       <property name="entityManagerFactory" ref="entityManagerFactory"></property>
+       <property name="queryString" value="SELECT c FROM CmnFileHdr c where c.id.seqNo=(Select min(cm.id.seqNo) from CmnFileHdr cm where cm.cmnInterfaceMst.ifFileId='#{jobParameters['INTERFACE_FILE_ID']}' and cm.stts='U'  ) "></property>
+    </bean> 
+    
+  <bean id="cmnHeaderProcessor" class="com.nissangroups.pd.processor.CMNHeaderProcess" scope="step"></bean>
+  
+  <bean id="eimWriter" class="org.springframework.batch.item.database.JpaItemWriter">
+		<property name="entityManagerFactory" ref="entityManagerFactory"></property>
+
+	</bean>
+</beans> 

@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:p="http://www.springframework.org/schema/p"
+    xmlns:aop="http://www.springframework.org/schema/aop" xmlns:context="http://www.springframework.org/schema/context"
+    xmlns:tx="http://www.springframework.org/schema/tx" xmlns:task="http://www.springframework.org/schema/task"
+    xmlns:util="http://www.springframework.org/schema/util" xmlns:batch="http://www.springframework.org/schema/batch"
+    xsi:schemaLocation="  
+             http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.0.xsd  
+             http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-4.0.xsd  
+             http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.0.xsd  
+             http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.0.xsd  
+             http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.0.xsd  
+             http://www.springframework.org/schema/batch http://www.springframework.org/schema/batch/spring-batch-2.2.xsd  
+             http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-4.0.xsd">
+
+    <import resource="../Config/spring-context-orm.xml" />
+    
+    <!-- <bean class="org.springframework.context.support.PropertySourcesPlaceholderConfigurer">
+       <property name="ignoreUnresolvablePlaceholders" value="true"></property>
+       
+       <property name="locations">
+           <list>
+               <value>classpath:resource/batch_config.properties</value>
+           </list>
+       </property> 
+    </bean> -->
+    
+       
+
+    <!--  PROCESS ID : P0003 -->
+    <batch:job id="B000001">
+        <batch:listeners>
+            <batch:listener ref="b000001jobExecutionListener" />
+        </batch:listeners>
+        <batch:step id="step1" next="step2">
+            <batch:tasklet>
+                <batch:listeners>
+                    <batch:listener ref="b000001failureLoggerListener">
+
+                    </batch:listener>
+                </batch:listeners>
+                <batch:chunk reader="porReader" processor="eismstprocessor"
+                    writer="porWriter" chunk-completion-policy="completionPolicy" />
+            </batch:tasklet>
+        </batch:step>
+        
+        <!--  PROCESS ID : P0004 -->
+        <batch:step id="step2" next="step3">
+            <batch:tasklet>
+                <batch:listeners>
+                    <batch:listener ref="b000001failureLoggerListener">
+                    </batch:listener>
+                </batch:listeners>
+                <batch:chunk reader="porBuyerReader" processor="eismstprocessor"
+                    writer="porWriter" chunk-completion-policy="completionPolicy">
+
+                </batch:chunk>
+            </batch:tasklet>
+
+        </batch:step>
+        
+        <!--  PROCESS ID : P0005 -->
+        <batch:step id="step3" next="step4">
+            <batch:tasklet>
+                <batch:listeners>
+                    <batch:listener ref="b000001failureLoggerListener">
+                    </batch:listener>
+                </batch:listeners>
+                <batch:chunk reader="porBuyerSpecDesReader" processor="eismstprocessor"
+                    writer="porWriter" chunk-completion-policy="completionPolicy">
+                </batch:chunk>
+            </batch:tasklet>
+
+        </batch:step>
+        
+        <!--  PROCESS ID : P0006 -->
+        <batch:step id="step4" next="step5">
+            <batch:tasklet>
+                <batch:listeners>
+                    <batch:listener ref="b000001failureLoggerListener"></batch:listener>
+                </batch:listeners>
+                <batch:chunk reader="eimExteriorReader" processor="eismstprocessor"
+                    writer="porWriter" chunk-completion-policy="completionPolicy">
+                </batch:chunk>
+
+            </batch:tasklet>
+
+        </batch:step>
+        <!--  PROCESS ID : P0007.6 -->
+        <batch:step id="step5" next="step6">
+            <batch:tasklet>
+                <batch:listeners>
+                    <batch:listener ref="b000001failureLoggerListener"></batch:listener>
+                </batch:listeners>
+                <batch:chunk reader="eimSuccessReader" processor="eismstprocessor"
+                    writer="porWriter" chunk-completion-policy="completionPolicy">
+                </batch:chunk>
+            </batch:tasklet>
+
+        </batch:step>
+               
+        
+        <!--  PROCESS ID : P0008 -->
+        <batch:step id="step6">
+            <batch:tasklet>
+                <batch:listeners>
+                    <batch:listener ref="b000001failureLoggerListener"></batch:listener>
+                </batch:listeners>
+                <batch:chunk reader="errorReportReader" writer="errorReportWriter"
+                    commit-interval="10000"></batch:chunk>
+            </batch:tasklet>
+
+        </batch:step>
+    </batch:job>
+
+    <bean id="completionPolicy" class="org.springframework.batch.repeat.policy.DefaultResultCompletionPolicy"></bean>
+    <bean id="b000001failureLoggerListener" class="com.nissangroups.pd.listeners.CommonFailureLoggerListener"></bean>
+    <bean id="b000001jobExecutionListener" class="com.nissangroups.pd.listeners.CommonJobExecutionListener">
+    </bean>
+
+    <bean id="porReader"
+        class="org.springframework.batch.item.database.JpaPagingItemReader"
+        scope="step">
+        <property name="entityManagerFactory" ref="entityManagerFactory"></property>
+        <property name="pageSize" value="10000"></property>
+        <property name="queryString"
+            value="SELECT e FROM MstEndItmSpec e where e.id.porCd not in (select p.porCd from MstPor p) and e.eiSpecErrFlag in ('0','1') order by e.id.seqId,e.id.porCd"></property>
+
+    </bean>
+    
+    
+
+    <bean id="porBuyerReader"
+        class="org.springframework.batch.item.database.JpaPagingItemReader"
+        scope="step">
+        <property name="entityManagerFactory" ref="entityManagerFactory"></property>
+        <property name="queryString"
+            value="SELECT e FROM MstEndItmSpec e where e.id.buyerCd not in (select b.id.buyerCd from MstPor p,MstBuyer b where b.id.prodRegionCd = p.mstProdRegionCode and p.porCd = e.id.porCd ) and e.eiSpecErrFlag in ('0','1') and e.eiSpecIntErrCd in ('0','2') order by e.id.seqId,e.id.porCd"></property>
+        <property name="pageSize" value="10000"></property>
+    </bean>
+
+    <bean id="porBuyerSpecDesReader"
+        class="org.springframework.batch.item.database.JpaPagingItemReader"
+        scope="step">
+        <property name="entityManagerFactory" ref="entityManagerFactory"></property>
+        <property name="queryString"
+            value="SELECT e FROM MstEndItmSpec e where e.id.specDestnCd not in (select b.id.specDestnCd from MstPor p, MstBuyerSpecDestn b where b.id.prodRegionCd = p.mstProdRegionCode and p.porCd = e.id.porCd ) and e.eiSpecErrFlag in ('0','1') and e.eiSpecIntErrCd in ('0','3') order by e.id.seqId,e.id.porCd"></property>
+        <property name="pageSize" value="10000"></property>
+    </bean>
+
+    <bean id="eimExteriorReader"
+        class="org.springframework.batch.item.database.JpaPagingItemReader" scope="step">
+        <property name="entityManagerFactory" ref="entityManagerFactory"></property>
+        <property name="queryString"
+            value="SELECT e FROM MstEndItmSpec e where concat(e.id.extClrCd,e.id.prodFmyCd) not in (select concat(e.id.extClrCd,e.id.prodFmyCd) from MstExtClr e,MstEndItmSpec m where e.id.prodFmyCd = m.id.prodFmyCd) and e.eiSpecErrFlag in ('0','4') and e.eiSpecIntErrCd in ('0','4') order by e.id.seqId,e.id.porCd"></property>
+        <property name="pageSize" value="10000"></property>
+    </bean>
+
+    <bean id="eimSuccessReader"
+        class="org.springframework.batch.item.database.JpaPagingItemReader">
+        <property name="entityManagerFactory" ref="entityManagerFactory"></property>
+        <property name="queryString"
+            value="SELECT e FROM MstEndItmSpec e where e.eiSpecErrFlag ='0'"></property>
+    </bean>
+
+    
+    
+    <bean id="errorReportReader1" class="org.springframework.batch.item.database.JpaPagingItemReader" scope="step">
+    <property name="entityManagerFactory" ref="entityManagerFactory"></property>
+    <property name="queryString" value="SELECT e FROM MstEndItmSpec e where e.eiSpecErrFlag ='1'"></property>
+    </bean>
+
+    <bean id="eismstprocessor" class="com.nissangroups.pd.processor.B000001Processor" scope="step"> 
+       
+        
+    </bean>
+    
+    <bean id="porWriter" class="org.springframework.batch.item.database.JpaItemWriter"
+        scope="step">
+        <property name="entityManagerFactory" ref="entityManagerFactory" />
+    </bean>
+    <bean id="reportDao" class="com.nissangroups.pd.dao.B000001ReportDao">
+        
+    </bean>
+    
+    <bean id="errorReportReader" class="com.nissangroups.pd.reader.B000001ReportReader" >
+       
+    </bean>
+
+    <bean id="errorReportWriter" class="com.nissangroups.pd.writer.B000001ErrorWriter" scope="step">
+    
+    </bean>
+    
+    
+
+
+</beans> 

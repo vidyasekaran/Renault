@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:aop="http://www.springframework.org/schema/aop" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:tx="http://www.springframework.org/schema/tx" xmlns:task="http://www.springframework.org/schema/task"
+	xmlns:util="http://www.springframework.org/schema/util" xmlns:batch="http://www.springframework.org/schema/batch"
+	xsi:schemaLocation="  
+             http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.0.xsd  
+             http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-4.0.xsd  
+             http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.0.xsd  
+             http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.0.xsd  
+             http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.0.xsd  
+             http://www.springframework.org/schema/batch http://www.springframework.org/schema/batch/spring-batch-2.2.xsd  
+             http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-4.0.xsd">
+
+	<import resource="../Config/spring-context-orm.xml" />
+	
+	<bean id="b000027failureLoggerListener" class="com.nissangroups.pd.listeners.CommonFailureLoggerListener"></bean>
+	<bean id="b000027jobExecutionListener" class="com.nissangroups.pd.listeners.CommonJobExecutionListener"></bean>
+
+	<batch:job id="b000027">
+		<batch:listeners>
+			<batch:listener ref="b000027jobExecutionListener" />
+		</batch:listeners>
+		
+		<batch:step id="step1" next="step2">
+            <batch:tasklet>
+                <batch:listeners>
+                    <batch:listener ref="b000027failureLoggerListener">
+
+                    </batch:listener>
+                </batch:listeners>
+                <batch:chunk reader="b000027CustomReader" processor="delMnthlyPrdnOrdrTrn"
+                    writer="NoOpItemWriter" commit-interval="10000"/>
+            </batch:tasklet>
+        </batch:step>
+
+		<batch:step id="step2" next="step3" >
+			<batch:tasklet>
+				<batch:listeners>
+					<batch:listener ref="b000027failureLoggerListener">
+					</batch:listener>
+				</batch:listeners>
+				<batch:chunk reader="b000027CustomReader" processor="mnthlyOrdrDtlsProcessor"
+					writer="NoOpItemWriter" commit-interval="10000"/>
+			</batch:tasklet>
+		</batch:step>
+		
+		<batch:step id="step3" >
+			<batch:tasklet>
+				<batch:listeners>
+					<batch:listener ref="b000027failureLoggerListener">
+					</batch:listener>
+				</batch:listeners>
+				<batch:chunk reader="b000027CustomReader" processor="compositeItemOrdrDtlandBrchRptProcessor"
+					writer="NoOpItemWriter" commit-interval="10000"/>
+			</batch:tasklet>
+		</batch:step>
+		
+	</batch:job>
+
+	
+	<!-- Reader for ORDER TAKE BASE MONTH EXTRACTION from MONTHLY_ORDER_TAKE_BASE_PERIOD_MST  [P0001] -->
+	
+	<bean id="b000027CustomReader" class="com.nissangroups.pd.b000027.reader.OrdrTkBsMnthExtractionReader"
+		scope="step">
+		<property name="pageSize" value="10000"></property>
+		<property name="entityManagerFactory" ref="entityManagerFactory"></property>
+	</bean>
+	
+	<!--Reader End-->
+	
+	<!--Processor for deleting data in  MONTHLY PRODUCTION ORDER TRN table [P0011]  -->
+	
+	<bean id="delMnthlyPrdnOrdrTrn" 
+	class="com.nissangroups.pd.b000027.processor.DelMnthlyPrdnOrdrTrnProcessor" 
+	scope="step"> 
+	<property name="jobParamPor" value="#{jobParameters['porCd']}" />
+		<property name="jobParamStgCd" value="#{jobParameters['stageCd']}" />
+		<property name="jobParamOrdrQty" value="#{jobParameters['ordrQty']}" />
+	</bean>
+	
+	<!--Processor  for creating MONTHLY PRODUCTION ORDER data [P0001 - P0011]  -->
+	
+	<bean id="mnthlyOrdrDtlsProcessor"
+		class="com.nissangroups.pd.b000027.processor.ExtractMnthlyOrdrDtlsProcessor"
+		scope="step">
+		<property name="jobParamPor" value="#{jobParameters['porCd']}" />
+		<property name="jobParamStgCd" value="#{jobParameters['stageCd']}" />
+		<property name="jobParamOrdrQty" value="#{jobParameters['ordrQty']}" />
+	</bean>
+	
+	<bean id="compositeItemOrdrDtlandBrchRptProcessor"
+        class="org.springframework.batch.item.support.CompositeItemProcessor"
+        scope="step">
+        <property name="delegates">
+            <util:list>
+            	<ref bean="mnthlyOrdrDtlRptProcessor" />
+            	<ref bean="mnthlyOCFBrchRptProcessor" />
+            </util:list>
+        </property>
+    </bean>
+    
+    <!--PST-DRG-R000010  -->
+    <bean id="mnthlyOrdrDtlRptProcessor"
+		class="com.nissangroups.pd.b000027.processor.MnthlyOrdrDtlRptProcessor"
+		scope="step">
+		<property name="jobParamPor" value="#{jobParameters['porCd']}" />
+		<property name="jobParamStgCd" value="#{jobParameters['stageCd']}" />
+		<property name="jobParamOrdrQty" value="#{jobParameters['ordrQty']}" />
+	</bean>
+	
+	<!--PST-DRG-R000013  -->
+    <bean id="mnthlyOCFBrchRptProcessor"
+		class="com.nissangroups.pd.b000027.processor.MnthlyOCfBrchRptProcessor"
+		scope="step">
+		<property name="jobParamPor" value="#{jobParameters['porCd']}" />
+		<property name="jobParamStgCd" value="#{jobParameters['stageCd']}" />
+		<property name="jobParamOrdrQty" value="#{jobParameters['ordrQty']}" />
+	</bean>
+	
+	<!--Processor End  -->
+	
+		<!-- Writer to Update the Stage code and Stage Status Code in MONTHLY_ORDER_TAKE_BASE_PERIOD_MST [P0005] -->
+
+ 	 <bean id = "NoOpItemWriter" class="com.nissangroups.pd.writer.NoOpItemWriter" scope="step"></bean>  
+ 	 
+ 	 <!--Writer End -->
+ 	 
+ 	 <bean id = "mnthPrdnOrdrRepo" class="com.nissangroups.pd.repository.MnthlyPrdnOrdrTrnRepository" ></bean>
+ 	 <bean id = "prmtrMstRepo" class="com.nissangroups.pd.repository.ParameterMstRepository" ></bean>
+ 	 <bean id="mnthlyOrdrIfTrnRepositoryObj" class="com.nissangroups.pd.repository.MnthlyOrdrIfTrnRepository"></bean>
+ 	 <bean id="ordrSpecErrRpt" class="com.nissangroups.pd.b000027.process.CreateOrdrSpecErrorRptProcess"></bean>
+ 	 <bean id="wkNoCalendarRepositoryObj" class="com.nissangroups.pd.repository.WeekNoCalendarRepository"></bean>
+ 	 <bean id="ocfBrchRpt" class="com.nissangroups.pd.b000027.process.CreateMnthlyOCFBreachRptProcess"></bean>
+ 	 <bean id="crtSrvcErrRpt" class="com.nissangroups.pd.b000027.process.CreateSrvcErrRptProcess"></bean>
+</beans>

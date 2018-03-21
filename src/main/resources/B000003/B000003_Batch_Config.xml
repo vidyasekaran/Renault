@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:aop="http://www.springframework.org/schema/aop" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:tx="http://www.springframework.org/schema/tx" xmlns:task="http://www.springframework.org/schema/task"
+	xmlns:util="http://www.springframework.org/schema/util" xmlns:batch="http://www.springframework.org/schema/batch"
+	xsi:schemaLocation="  
+             http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.0.xsd  
+             http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-4.0.xsd  
+             http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.0.xsd  
+             http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.0.xsd  
+             http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.0.xsd  
+             http://www.springframework.org/schema/batch http://www.springframework.org/schema/batch/spring-batch-2.2.xsd  
+             http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-4.0.xsd">
+
+	<import resource="../Config/spring-context-orm.xml" />
+	<bean id="transactionManager" class="org.springframework.orm.jpa.JpaTransactionManager">
+		<property name="entityManagerFactory" ref="entityManagerFactory" />
+		<property name="dataSource" ref="dataSource" />
+	</bean>
+	<bean id="persistenceAnnotation"
+		class="org.springframework.orm.jpa.support.PersistenceAnnotationBeanPostProcessor" />
+	<tx:annotation-driven transaction-manager="transactionManager" />
+	<bean id="jobRepository"
+		class="org.springframework.batch.core.repository.support.MapJobRepositoryFactoryBean">
+		<property name="transactionManager" ref="transactionManager" />
+		<property name="isolationLevelForCreate" value="ISOLATION_DEFAULT" />
+	</bean>
+	<bean id="jobLauncher"
+		class="org.springframework.batch.core.launch.support.SimpleJobLauncher">
+		<property name="jobRepository" ref="jobRepository" />
+	</bean>
+	
+	
+		<batch:job id="B000003">
+			
+			<batch:step id="b3-step1" next="b3-step2">
+				<batch:tasklet>
+					<batch:listeners>
+						 <batch:listener ref="promotionListener"/>
+					</batch:listeners>
+					<batch:chunk reader="ordertakebasemonthReader" processor="ordertakebasemonthProcessor"
+						writer="b000003Writer" commit-interval="1000" />
+				</batch:tasklet>
+			</batch:step>
+			<batch:step id="b3-step2" next="b3-step3">
+				<batch:tasklet>
+					<batch:listeners>
+						 <batch:listener ref="carseriespromotionListener"/>
+					</batch:listeners>
+					<batch:chunk reader="minimumCarSrsReader" processor="minimumCarSeriesProcessor"
+						writer="b000003Writer" commit-interval="1000" />
+				</batch:tasklet>
+			</batch:step>
+			<batch:step id="b3-step3" next="b3-step4">
+			
+			<batch:tasklet>
+				 
+				<batch:chunk reader="b3dragonJpaPagingItemReader" processor="b3Processor"
+					writer="b000003Writer" commit-interval="1000" />
+			</batch:tasklet>
+			
+		</batch:step> 
+		<batch:step id="b3-step4">
+			<batch:tasklet>
+				<batch:chunk reader="errorReportReader" writer="errorReportWriter"
+					commit-interval="1000"></batch:chunk>
+			</batch:tasklet>
+
+		</batch:step>
+ 		</batch:job>
+ 		
+ 		 <bean id = "b3dragonJpaPagingItemReader" class="com.nissangroups.pd.reader.B000003EndItemSpecReader" scope="step">
+     <property name="entityManagerFactory" ref="entityManagerFactory"></property>
+    </bean>
+	<bean id="ordertakebasemonthReader"
+		class="org.springframework.batch.item.database.JpaPagingItemReader"
+		scope="step">
+		<property name="entityManagerFactory" ref="entityManagerFactory"></property>
+		<property name="queryString"
+			value="SELECT max(w.id.ordrTakeBaseMnth) FROM MstWklyOrdrTakeBase w where w.id.por = '#{jobParameters['por']}'"></property>
+	</bean>	
+	
+	<bean id="minimumCarSrsReader"
+		class="org.springframework.batch.item.database.JpaPagingItemReader"
+		scope="step">
+		<property name="entityManagerFactory" ref="entityManagerFactory"></property>
+		<property name="queryString"
+			value="SELECT p.val1 FROM MstPrmtr p where p.id.key1='#{jobParameters['por']}' and p.id.prmtrCd='MINIMUM_CAR_SERIES_PERIOD'"></property>
+	</bean>	
+			
+		<bean id="promotionListener" class="org.springframework.batch.core.listener.ExecutionContextPromotionListener">
+   	    <property name="keys" value="MAX_ORDER_TAKE_BASE_MONTH"/>
+	    </bean>
+	    <bean id="carseriespromotionListener" class="org.springframework.batch.core.listener.ExecutionContextPromotionListener">
+   	    <property name="keys" value="MINIMUM_CAR_SERIES_PERIOD"/>
+	    </bean>		
+				
+    <bean id = "b000003Writer" class="com.nissangroups.pd.writer.B000003Writer" scope="step"></bean>
+    
+  
+    
+    <bean id = "b3Processor" class="com.nissangroups.pd.processor.B000003Processor" scope="step"></bean>
+ 	<bean id ="b3ReportDao" class="com.nissangroups.pd.dao.B000003ReportDao"></bean>
+ 	 <bean id = "minimumCarSeriesProcessor" class="com.nissangroups.pd.processor.MinimumCarSeriesProcessor" scope="step"></bean>
+     <bean id = "ordertakebasemonthProcessor" class="com.nissangroups.pd.processor.OrdertakebasemonthProcessor" scope="step"></bean>
+    <bean id="errorReportWriter" class="org.springframework.batch.item.file.FlatFileItemWriter"
+		scope="step">
+		<property name="resource"
+		     value="file:#{jobExecutionContext['fileName']}" >
+
+		</property>
+		<property name="headerCallback" ref="headerCallback"></property>
+		 <property name="appendAllowed" value="true"></property> 
+		<property name="shouldDeleteIfExists" value="true"></property>
+		<property name="lineAggregator">
+			<bean
+				class="org.springframework.batch.item.file.transform.DelimitedLineAggregator">
+
+				<property name="delimiter">
+					<util:constant
+						static-field="org.springframework.batch.item.file.transform.DelimitedLineTokenizer.DELIMITER_TAB" />
+				</property>
+				<property name="fieldExtractor">
+					<bean
+						class="org.springframework.batch.item.file.transform.BeanWrapperFieldExtractor">
+						<property name="names"
+							value="por_cd,production_stage_cd,production_family_cd
+				,buyer_cd,end_item_model_cd,end_item_color_cd,
+				spec_destination_cd,additional_spec_cd,
+				adopt_month,abolish_month,error_code,error_message"></property>
+					</bean>
+				</property>
+
+			</bean>
+
+		</property>
+	</bean>
+	<bean id="headerCallback" class="com.nissangroups.pd.header.ErrorReportHeader"></bean>
+	<bean id="errorReportReader" class="com.nissangroups.pd.reader.B000003ReportReader">
+	</bean>
+   </beans>

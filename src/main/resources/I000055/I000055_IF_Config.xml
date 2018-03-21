@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:aop="http://www.springframework.org/schema/aop" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:tx="http://www.springframework.org/schema/tx" xmlns:task="http://www.springframework.org/schema/task"
+	xmlns:util="http://www.springframework.org/schema/util" xmlns:batch="http://www.springframework.org/schema/batch"
+	xsi:schemaLocation="  
+             http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.0.xsd  
+             http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-4.0.xsd  
+             http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.0.xsd  
+             http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.0.xsd  
+             http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.0.xsd  
+             http://www.springframework.org/schema/batch http://www.springframework.org/schema/batch/spring-batch-2.2.xsd  
+             http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-4.0.xsd">
+
+	<import resource="../Config/spring-context-orm.xml" />
+	<bean id="transactionManager" class="org.springframework.orm.jpa.JpaTransactionManager">
+		<property name="entityManagerFactory" ref="entityManagerFactory" />
+		<property name="dataSource" ref="dataSource" />
+	</bean>
+	<bean id="persistenceAnnotation"
+		class="org.springframework.orm.jpa.support.PersistenceAnnotationBeanPostProcessor" />
+	<tx:annotation-driven transaction-manager="transactionManager" />
+	<bean id="jobRepository"
+		class="org.springframework.batch.core.repository.support.MapJobRepositoryFactoryBean">
+		<property name="transactionManager" ref="transactionManager" />
+		<property name="isolationLevelForCreate" value="ISOLATION_DEFAULT" />
+	</bean>
+	<bean id="jobLauncher"
+		class="org.springframework.batch.core.launch.support.SimpleJobLauncher">
+		<property name="jobRepository" ref="jobRepository" />
+	</bean>
+
+
+	<batch:job id="I000055">
+
+		<batch:step id="step1" next="step2">
+			<tasklet ref="initializeQuery">
+			</tasklet>
+		</batch:step>
+
+		<batch:step id="step2">
+
+			<batch:tasklet>
+
+				<batch:chunk reader="i000055reader" processor="i000055processor"
+					writer="i000055writer" commit-interval="1" />
+
+			</batch:tasklet>
+
+			<batch:next on="FAILED" to="Fail" />
+			<batch:next on="COMPLETED" to="step3" />
+
+		</batch:step>
+		
+		<batch:step id="step3">
+
+			<batch:tasklet>
+
+				<batch:chunk reader="tmpDailyOcfLmtIfReader" processor="tmpDailyOcfLmtIfProcessor"
+					writer="trnDailyOcfLmtWriter" commit-interval="1" />
+
+			</batch:tasklet>
+
+			<batch:next on="FAILED" to="step4" />
+			<batch:next on="COMPLETED" to="step4" />
+
+		</batch:step>	
+		
+		<!-- Generate Report -->
+		<batch:step id="step4">
+			<batch:tasklet>
+				<batch:listeners>
+					<batch:listener ref="failureLoggerListener">
+					</batch:listener>
+				</batch:listeners>
+				<batch:chunk reader="I55errorReportReader" writer="I55errorReportWriter"
+					commit-interval="10000"></batch:chunk>
+			</batch:tasklet>		
+			<batch:next on="FAILED" to="Fail" />
+			<batch:next on="COMPLETED" to="Success" />	
+		</batch:step>		
+
+		<!-- Update the overall status incase of any Exception Common File Header -->
+		<batch:step id="Fail">
+			<batch:tasklet>
+				<batch:chunk reader="cmnHeaderReader" processor="cmnHeaderProcessor"
+					writer="cmnHdrWriter" commit-interval="1">
+				</batch:chunk>
+			</batch:tasklet>
+
+		</batch:step>
+		<!-- Update the overall status into Common File Header -->
+		<batch:step id="Success">
+			<batch:tasklet>
+				<batch:chunk reader="cmnHeaderReader" processor="cmnHeaderProcessor"
+					writer="cmnHdrWriter" commit-interval="1">
+				</batch:chunk>
+			</batch:tasklet>
+		</batch:step>
+		
+	</batch:job>
+
+	<bean id="initializeQuery" class="com.nissangroups.pd.i000055.util.I000055QuerySetTasklet"
+		scope="step" />
+
+
+<!-- Step1 Reader, Processor, Writer -->
+
+	<bean id="i000055reader"
+		class="org.springframework.batch.item.database.JpaPagingItemReader"
+		scope="step">
+		<property name="entityManagerFactory" ref="entityManagerFactory"></property>
+		<property name="queryProvider" ref="i000055extraction"></property>
+	</bean>
+
+	<bean id="i000055extraction"
+		class="org.springframework.batch.item.database.orm.JpaNativeQueryProvider"
+		scope="step">
+		<property name="sqlQuery" value="#{jobExecutionContext['dynaQuery']}">
+		</property>
+		<property name="entityClass"
+			value="com.nissangroups.pd.i000055.output.I000055OutputBean"></property>
+	</bean>
+
+	<bean id="i000055processor" class="com.nissangroups.pd.i000055.processor.I000055Processor"></bean>
+
+	<bean id="i000055writer" class="org.springframework.batch.item.database.JpaItemWriter">
+		<property name="entityManagerFactory" ref="entityManagerFactory"></property>
+	</bean>
+	
+	
+	<!-- Step2 Reader, Processor, Writer -->
+	
+	<bean id="tmpDailyOcfLmtIfReader"
+		class="org.springframework.batch.item.database.JpaPagingItemReader"
+		scope="step">
+		<property name="entityManagerFactory" ref="entityManagerFactory"></property>
+		<property name="queryString" value="select c from TmpDailyOcfLmtIf c where c.id.porCd = '#{jobParameters['porCd']}' " />		
+	</bean>
+
+	<bean id="tmpDailyOcfLmtIfProcessor" class="com.nissangroups.pd.i000055.processor.TmpDailyOcfLmtIfProcessor"></bean>
+
+	<!-- <bean id="trnDailyOcfLmtWriter" class="org.springframework.batch.item.database.JpaItemWriter">
+		<property name="entityManagerFactory" ref="entityManagerFactory"></property>
+	</bean> -->
+	
+	<bean id="trnDailyOcfLmtWriter" class="com.nissangroups.pd.i000055.writer.I000055Writer">		
+	</bean>
+
+	<bean id="commonutility" class="com.nissangroups.pd.util.IfCommonUtil"></bean>
+
+	<!-- header updation beans -->
+	<bean id="cmnHeaderReader"
+		class="org.springframework.batch.item.database.JpaPagingItemReader"
+		scope="step">
+		<property name="entityManagerFactory" ref="entityManagerFactory"></property>
+		<property name="queryString"
+			value="SELECT c FROM CmnFileHdr c where c.id.seqNo = #{jobExecutionContext['seqNumber']} and  c.id.ifFileId='#{jobParameters['interfaceFileId']}'"></property>
+	</bean>
+
+	<bean id="cmnHeaderProcessor" class="com.nissangroups.pd.processor.IfCmnHeaderProcessor"
+		scope="step"></bean>
+
+	<bean id="cmnHdrWriter" class="org.springframework.batch.item.database.JpaItemWriter">
+		<property name="entityManagerFactory" ref="entityManagerFactory"></property>
+	</bean>
+
+
+   <!-- error report beans -->
+   <!-- I000055 Reports -->
+	<bean id="I55errorReportReader" class="com.nissangroups.pd.i000055.reader.I000055ReportReader">
+	</bean>
+		<!-- I000055 Reports -->
+	<bean id="I55errorReportWriter" class="org.springframework.batch.item.file.FlatFileItemWriter"
+		scope="step">
+		<property name="resource" value="file:#{jobExecutionContext['errFileName']}">
+
+		</property>
+		<property name="headerCallback" ref="headerCallback"></property>
+		<property name="appendAllowed" value="true"></property>
+		<property name="shouldDeleteIfExists" value="true"></property>
+		<property name="lineAggregator">
+			<bean
+				class="org.springframework.batch.item.file.transform.DelimitedLineAggregator">
+
+				<property name="delimiter">
+					<util:constant
+						static-field="org.springframework.batch.item.file.transform.DelimitedLineTokenizer.DELIMITER_TAB" />
+				</property>
+				<property name="fieldExtractor">
+					<bean
+						class="org.springframework.batch.item.file.transform.BeanWrapperFieldExtractor">
+						<property name="names"
+							value="porCd,ordrTakBasPrd,prodPrd,carSrs,ocfRegionCd,ocfBuyerGrpCd,ocfFrmeCd,featCd,ocfShortDesc,ocfLmt,errorMsg"></property>
+					</bean>
+				</property>
+			</bean>
+		</property>
+	</bean>		
+	<bean id="headerCallback" class="com.nissangroups.pd.i000055.header.I000055ErrorReportHeader"></bean>
+
+    <bean id="failureLoggerListener"
+		class="com.nissangroups.pd.listeners.CommonFailureLoggerListener"></bean>
+
+</beans> 

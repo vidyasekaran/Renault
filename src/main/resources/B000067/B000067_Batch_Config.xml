@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:p="http://www.springframework.org/schema/p"
+    xmlns:aop="http://www.springframework.org/schema/aop" xmlns:context="http://www.springframework.org/schema/context"
+    xmlns:tx="http://www.springframework.org/schema/tx" xmlns:task="http://www.springframework.org/schema/task"
+    xmlns:util="http://www.springframework.org/schema/util" xmlns:batch="http://www.springframework.org/schema/batch"
+    xsi:schemaLocation="  
+             http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.0.xsd  
+             http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-4.0.xsd  
+             http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.0.xsd  
+             http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.0.xsd  
+             http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.0.xsd  
+             http://www.springframework.org/schema/batch http://www.springframework.org/schema/batch/spring-batch-2.2.xsd  
+             http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-4.0.xsd">
+
+    <import resource="../Config/spring-context-orm.xml" />
+    
+    
+    <bean id="failureLoggerListener"
+        class="com.nissangroups.pd.listeners.CommonFailureLoggerListener"></bean>
+    <bean id="jobExecutionListener"
+        class="com.nissangroups.pd.listeners.CommonJobExecutionListener">
+    </bean>
+    
+    
+    <batch:job id="B000067">
+        <batch:listeners>
+            <batch:listener ref="jobExecutionListener" />
+
+        </batch:listeners>
+        <batch:step id="step1" >
+            <batch:tasklet>
+                <batch:listeners>
+                    <batch:listener ref="failureLoggerListener">
+    
+                  
+                  </batch:listener>
+    				
+                </batch:listeners>
+                <batch:chunk reader="offlineDateReader" processor="offlineDateProcessor"
+                    writer="customListWriter" commit-interval="1000000"  />
+                                        
+            </batch:tasklet>
+
+        </batch:step>
+        
+    </batch:job>
+
+    <bean id="offlineDateProcessor" class="com.nissangroups.pd.b000067.processor.OfflineDateProcessor" scope="step">
+            <property name="porCd" value="#{jobParameters['porCd']}" />
+            <property name="targetMnth" value="#{jobParameters['targetMnth']}" />
+    </bean>        
+    
+    			
+    
+    
+    <bean id="offlineDateReader"
+        class="org.springframework.batch.item.database.JpaPagingItemReader"
+        scope="step">
+        <property name="entityManagerFactory" ref="entityManagerFactory"></property>
+        <property name="pageSize" value="1"></property>
+        <property name="queryString"
+            value="#{jobExecutionContext['dynamicQuery']}"></property>
+
+    </bean>
+    
+    	
+    
+    <bean id="customListWriter" class="com.nissangroups.pd.writer.JpaCustomListItemWriter"
+        scope="step">
+        <property name="entityManagerFactory" ref="entityManagerFactory" />
+    </bean>
+    
+    
+    <bean id="ordrTkBsPrdMstRepositoryObj" class="com.nissangroups.pd.repository.OrdrTkBsPrdMstRepository">
+    </bean>
+    
+    <bean id="offlineDateRepositoryObj" class="com.nissangroups.pd.b000067.repository.OfflineDateRepository">
+    </bean>
+    
+</beans>

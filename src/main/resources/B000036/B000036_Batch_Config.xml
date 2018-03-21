@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:aop="http://www.springframework.org/schema/aop" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:tx="http://www.springframework.org/schema/tx" xmlns:task="http://www.springframework.org/schema/task"
+	xmlns:util="http://www.springframework.org/schema/util" xmlns:batch="http://www.springframework.org/schema/batch"
+	xsi:schemaLocation="  
+             http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.0.xsd  
+             http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-4.0.xsd  
+             http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.0.xsd  
+             http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.0.xsd  
+             http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.0.xsd  
+             http://www.springframework.org/schema/batch http://www.springframework.org/schema/batch/spring-batch-2.2.xsd  
+             http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-4.0.xsd">
+
+	<import resource="../Config/spring-context-orm.xml" />
+	
+	<bean id="b000036failureLoggerListener" class="com.nissangroups.pd.listeners.CommonFailureLoggerListener"></bean>
+	<bean id="b000036jobExecutionListener" class="com.nissangroups.pd.listeners.CommonJobExecutionListener"></bean>
+
+	<batch:job id="b000036">
+		<batch:listeners>
+			<batch:listener ref="b000036jobExecutionListener" />
+		</batch:listeners>
+
+		<batch:step id="step1" >
+			<batch:tasklet>
+				<batch:listeners>
+					<batch:listener ref="b000036failureLoggerListener">
+					</batch:listener>
+				</batch:listeners>
+				<batch:chunk reader="b000036Reader" processor="mstwklyOrdrTkBsPrdProcessor"
+					writer="b000036Writer" commit-interval="10000"/>
+			</batch:tasklet>
+		</batch:step>
+		
+	</batch:job>
+
+	
+	<!-- Reader for ORDER TAKE BASE MONTH, WEEK NO EXTRACTION from WEEKLY_ORDER_TAKE_BASE_PERIOD_MST  [P0001] -->
+	
+	<bean id="b000036Reader"
+		class="org.springframework.batch.item.database.JpaPagingItemReader"
+		scope="step">
+		<property name="entityManagerFactory" ref="entityManagerFactory"></property>																																						
+		<property name="queryString"
+		value="select max(m.id.ordrTakeBaseMnth),max(m.id.ordrTakeBaseWkNo) from MstWklyOrdrTakeBase m where m.stageCd = 'WK' and m.stageSttsCd = 'O' and m.id.por='#{jobParameters['porCd']}'">
+		</property>
+	</bean>
+	
+	<!--Reader End-->
+	
+	<!--Processor  -->
+	
+	<bean id="mstwklyOrdrTkBsPrdProcessor"
+		class="com.nissangroups.pd.b000036.processor.MstWklyOrdrTkBsPrdProcessor"
+		scope="step">
+	</bean>
+	
+	<!--Processor End  -->
+	
+		<!-- Writer to Update the Stage code and Stage Status Code in WEEKLY_ORDER_TAKE_BASE_PERIOD_MST [P0002] -->
+
+ 	 <bean id = "b000036Writer" class="com.nissangroups.pd.b000036.writer.WklyOrdrTkBsPrdWriter" scope="step"></bean>  
+ 	 
+ 	 <!--Writer End -->
+ 	 
+	<bean id = "wkOrdrTkBsPrdRepo" class="com.nissangroups.pd.repository.MstWklyOrdrTkBsPrdRepository" ></bean> 
+	
+</beans>

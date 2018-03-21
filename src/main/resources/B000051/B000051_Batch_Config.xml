@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:aop="http://www.springframework.org/schema/aop" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:tx="http://www.springframework.org/schema/tx" xmlns:task="http://www.springframework.org/schema/task"
+	xmlns:util="http://www.springframework.org/schema/util" xmlns:batch="http://www.springframework.org/schema/batch"
+	xsi:schemaLocation="  
+             http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.0.xsd  
+             http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-4.0.xsd  
+             http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.0.xsd  
+             http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.0.xsd  
+             http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.0.xsd  
+             http://www.springframework.org/schema/batch http://www.springframework.org/schema/batch/spring-batch-2.2.xsd  
+             http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-4.0.xsd">
+
+	<import resource="../Config/spring-context-orm.xml" />
+	<bean id="transactionManager" class="org.springframework.orm.jpa.JpaTransactionManager">
+		<property name="entityManagerFactory" ref="entityManagerFactory" />
+		<property name="dataSource" ref="dataSource" />
+	</bean>
+	<bean id="persistenceAnnotation"
+		class="org.springframework.orm.jpa.support.PersistenceAnnotationBeanPostProcessor" />
+	<tx:annotation-driven transaction-manager="transactionManager" />
+	<bean id="jobRepository"
+		class="org.springframework.batch.core.repository.support.MapJobRepositoryFactoryBean">
+		<property name="transactionManager" ref="transactionManager" />
+		<property name="isolationLevelForCreate" value="ISOLATION_DEFAULT" />
+	</bean>
+	<bean id="jobLauncher"
+		class="org.springframework.batch.core.launch.support.SimpleJobLauncher">
+		<property name="jobRepository" ref="jobRepository" />
+	</bean>
+	<batch:job id="B000051">
+		<batch:listeners>
+			<batch:listener ref="b000001jobExecutionListener" />
+		</batch:listeners>
+		<batch:step id="step1">
+			<batch:tasklet>
+				<batch:listeners>
+					<batch:listener ref="b000001failureLoggerListener">
+					</batch:listener>
+				</batch:listeners>
+				<batch:chunk reader="b51Reader" processor="b51processor"
+					writer="b51writer" commit-interval="10000" />
+			</batch:tasklet>
+		</batch:step>
+	</batch:job>
+
+	<bean id="b51processor"
+		class="org.springframework.batch.item.support.CompositeItemProcessor"
+		scope="step">
+		<property name="delegates">
+			<util:list>
+				<ref bean="ProdMnthProcessor" />
+			 	<ref bean="FeatureCodeProcessor" /> 
+			</util:list>
+		</property>
+
+	</bean>
+
+	<bean id="ProdMnthProcessor"
+		class="com.nissangroups.pd.b000051.processor.ProdMnthProcessor"
+		scope="step">
+		<property name="reRunFlg" value="#{jobParameters['RE_RUN_FLAG']}" />
+	</bean>
+	<bean id="FeatureCodeProcessor"
+		class="com.nissangroups.pd.b000051.processor.FeatureCodeProcessor" scope="step">
+	</bean>
+
+
+	<bean id="b000001failureLoggerListener"
+		class="com.nissangroups.pd.listeners.CommonFailureLoggerListener"></bean>
+	<bean id="b000001jobExecutionListener"
+		class="com.nissangroups.pd.listeners.CommonJobExecutionListener">
+	</bean>
+	<bean id="b51Reader"
+		class="org.springframework.batch.item.database.JpaPagingItemReader"
+		scope="step">
+		<property name="entityManagerFactory" ref="entityManagerFactory"></property>
+		<property name="queryString"
+			value="SELECT m FROM MstWklyOrdrTakeBase m where m.stageCd='WK' and m.stageSttsCd='O' and m.id.por= '#{jobParameters['POR_CD']}' and 
+            m.id.ordrTakeBaseWkNo = (select MAX(s.id.ordrTakeBaseWkNo) from MstWklyOrdrTakeBase s where s.stageCd='WK'  and
+             s.stageSttsCd='O' and s.id.por= '#{jobParameters['POR_CD']}' and s.id.ordrTakeBaseMnth = (select MAX(d.id.ordrTakeBaseMnth)
+              from MstWklyOrdrTakeBase d where d.stageCd='WK'  and  d.stageSttsCd='O' and d.id.por= '#{jobParameters['POR_CD']}' )) 
+             and m.id.ordrTakeBaseMnth = (select MAX(c.id.ordrTakeBaseMnth) from MstWklyOrdrTakeBase c where c.stageCd='WK'  and
+             c.stageSttsCd='O' and c.id.por= '#{jobParameters['POR_CD']}')  )">
+		</property>
+	</bean>
+
+	<bean id="b51writer" class="com.nissangroups.pd.b000051.writer.NoOpItemWriter"></bean>
+	
+	
+	<bean id="objCalPrdMnth" class="com.nissangroups.pd.b000051.process.CalPrdMnthProcess"></bean>
+	<bean id="objExtractOrdrInfo" class="com.nissangroups.pd.b000051.process.ExtractOrdrInfoProcess"></bean>
+	<bean id="objUpdateOrdrQty" class="com.nissangroups.pd.b000051.process.UpdateOrdrQtyProcess"></bean>
+	<bean id="objInsertWklyOrdrTrn" class="com.nissangroups.pd.b000051.process.InsertWklyOrdrTrnProcess"></bean>
+	<bean id="objUpdateWklyOrdrTrn" class="com.nissangroups.pd.b000051.process.UpdateWklyOrdrTrnProcess"></bean>
+	<bean id="objInsertFeatDetails" class="com.nissangroups.pd.b000051.process.InsertFeatDetailsProcess"></bean>
+	<bean id="objUpdateBuyerGrpOCF" class="com.nissangroups.pd.b000051.process.UpdateBuyerGrpOCFProcess"></bean>
+	<bean id="objUpdateRegionalOCF" class="com.nissangroups.pd.b000051.process.UpdateRegionalOCFProcess"></bean>
+	
+	<bean id="wklyRep" class="com.nissangroups.pd.repository.WeeklyOrderRepository"></bean>
+
+
+</beans> 
+

@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:aop="http://www.springframework.org/schema/aop" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:tx="http://www.springframework.org/schema/tx" xmlns:task="http://www.springframework.org/schema/task"
+	xmlns:util="http://www.springframework.org/schema/util" xmlns:batch="http://www.springframework.org/schema/batch"
+	xsi:schemaLocation="  
+             http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.0.xsd  
+             http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-4.0.xsd  
+             http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.0.xsd  
+             http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.0.xsd  
+             http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.0.xsd  
+             http://www.springframework.org/schema/batch http://www.springframework.org/schema/batch/spring-batch-2.2.xsd  
+             http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-4.0.xsd">
+
+	<import resource="../Config/spring-context-orm.xml" />
+	<bean id="transactionManager" class="org.springframework.orm.jpa.JpaTransactionManager">
+		<property name="entityManagerFactory" ref="entityManagerFactory" />
+		<property name="dataSource" ref="dataSource" />
+	</bean>
+	<bean id="persistenceAnnotation"
+		class="org.springframework.orm.jpa.support.PersistenceAnnotationBeanPostProcessor" />
+	<tx:annotation-driven transaction-manager="transactionManager" />
+	<bean id="jobRepository"
+		class="org.springframework.batch.core.repository.support.MapJobRepositoryFactoryBean">
+		<property name="transactionManager" ref="transactionManager" />
+		<property name="isolationLevelForCreate" value="ISOLATION_DEFAULT" />
+	</bean>
+	<bean id="jobLauncher"
+		class="org.springframework.batch.core.launch.support.SimpleJobLauncher">
+		<property name="jobRepository" ref="jobRepository" />
+	</bean>
+	<batch:job id="B000011">
+		<batch:listeners>
+			<batch:listener ref="b000001jobExecutionListener" />
+		</batch:listeners>
+		<batch:step id="step1">
+			<batch:tasklet>
+				<batch:listeners>
+					<batch:listener ref="b000001failureLoggerListener">
+					</batch:listener>
+				</batch:listeners>
+				<batch:chunk reader="b11Reader" processor="b11processor"
+					writer="b11writer" commit-interval="10000" />
+			</batch:tasklet>
+		</batch:step>
+	</batch:job>
+
+	<bean id="b11processor"
+		class="org.springframework.batch.item.support.CompositeItemProcessor"
+		scope="step">
+		<property name="delegates">
+			<util:list>
+				<ref bean="SumInsUpdOCFLmtRgnLvlProcessor" />
+				<ref bean="CpyRgnToMnthlyOCFLmtProcessor" />
+			</util:list>
+		</property>
+
+	</bean>
+
+	<bean id="SumInsUpdOCFLmtRgnLvlProcessor"
+		class="com.nissangroups.pd.b000011.processor.SumInsUpdOCFLmtRgnLvlProcessor"
+		scope="step">
+		<property name="porCd" value="#{jobParameters['POR_CD']}" />
+		<property name="prcsOlyFlg" value="#{jobParameters['prcsOlyFlg']}" />
+	</bean>
+
+	<bean id="CpyRgnToMnthlyOCFLmtProcessor"
+		class="com.nissangroups.pd.b000011.processor.CpyRgnToMnthlyOCFLmtProcessor"
+		scope="step">
+	</bean>
+
+	<bean id="b000001failureLoggerListener"
+		class="com.nissangroups.pd.listeners.CommonFailureLoggerListener"></bean>
+	<bean id="b000001jobExecutionListener"
+		class="com.nissangroups.pd.listeners.CommonJobExecutionListener">
+	</bean>
+	<bean id="b11Reader"
+		class="org.springframework.batch.item.database.JpaPagingItemReader"
+		scope="step">
+		<property name="entityManagerFactory" ref="entityManagerFactory"></property>
+		<property name="queryString"
+			value="SELECT min(m.id.ordrTakeBaseMnth) FROM MstMnthOrdrTakeBasePd m where m.id.porCd='#{jobParameters['POR_CD']}' and m.stageCd #{jobParameters['stageCode']}  )">
+		</property>
+	</bean>
+
+	<bean id="b11writer" class="com.nissangroups.pd.b000011.writer.NoOpItemWriter"></bean>
+
+
+	<bean id="objSumOCFLmtRgnLvlProcess"
+		class="com.nissangroups.pd.b000011.process.SumOCFLmtRgnLvlProcess"></bean>
+	<bean id="objExtByrGrpCdAutoAllctn"
+		class="com.nissangroups.pd.b000011.process.ExtByrGrpCdAutoAllctnProcess"></bean>
+	<bean id="objUptOCFLmtByrGrpLvl"
+		class="com.nissangroups.pd.b000011.process.UptOCFLmtByrGrpLvlProcess"></bean>
+	<bean id="objRgnToMnthlyOCFLmtProcess"
+		class="com.nissangroups.pd.b000011.process.CpyRgnToMnthlyOCFLmtProcess"></bean>
+	<bean id="mnthOcfRep" class="com.nissangroups.pd.repository.MnthlyOCFTrnRepository"></bean>
+
+
+
+
+</beans> 
+

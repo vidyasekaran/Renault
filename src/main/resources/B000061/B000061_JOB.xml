@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:aop="http://www.springframework.org/schema/aop" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:tx="http://www.springframework.org/schema/tx" xmlns:task="http://www.springframework.org/schema/task"
+	xmlns:util="http://www.springframework.org/schema/util" xmlns:batch="http://www.springframework.org/schema/batch"
+	xsi:schemaLocation="  
+             http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.0.xsd  
+             http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-4.0.xsd  
+             http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.0.xsd  
+             http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.0.xsd  
+             http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.0.xsd  
+             http://www.springframework.org/schema/batch http://www.springframework.org/schema/batch/spring-batch-2.2.xsd  
+             http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-4.0.xsd">             
+<job id="B000061" xmlns="http://www.springframework.org/schema/batch">		
+
+		<batch:step id="start" next="P0000.1">
+			<tasklet ref="b000061InitializeData"> 
+			</tasklet>
+		</batch:step>
+		<batch:step id="P0000.1" next="P0001">
+			<batch:tasklet>							
+				<!-- In the Reader : form the query based on below stmts   				
+						Common_Layer_data.[Interface_File_Id]   = (select Receive_Interface_File_Id from Interface_master where Interface_File_id = [B000066]-[Interface File ID])   AND
+						Common_Layer_data.Sequence_No   =   max (Common_Layer_data.Sequence_No   for the selected  Receive_interface_file_id)
+				-->				
+				<batch:chunk reader="b61ReaderP0000.1" processor="b61ProcessorP0000.1"
+					writer="b61WriterP0000.1" commit-interval="10000" />
+			</batch:tasklet>
+		</batch:step>
+		
+		<batch:step id="P0001" next="ctrlFileFlagDecision">
+			<batch:tasklet>			
+				<batch:listeners>
+					<batch:listener ref="P0001Listener">
+					</batch:listener>
+				</batch:listeners>
+				<batch:chunk reader="b61ReaderP0001" processor="b61rocessorP0001"
+					writer="flatFileItemWriter" commit-interval="10000" />
+			</batch:tasklet>
+		</batch:step>
+		
+		
+		
+		<batch:decision decider="ctrlFileFlagDecider" id="ctrlFileFlagDecision">
+			<batch:next on="yesCtrlFile" to="generateCtrlFile" />
+			<batch:next on="noCtrlFile" to="P0002" />
+		</batch:decision>
+		
+		
+		<batch:step id="generateCtrlFile" next="P0002">
+			<batch:tasklet>			
+				<batch:listeners>
+					<batch:listener ref="ctrlFileListener">
+					</batch:listener>
+				</batch:listeners>
+				<batch:chunk reader="b61ReaderCtrlFile" processor="b61rocessorCtrlFile" writer="ctrlFileFlatFileItemWriter" commit-interval="10000" />
+			</batch:tasklet>
+		</batch:step>
+		
+		 <batch:step id="P0002">
+			<batch:tasklet ref="MoveFileTasklet" />										
+		</batch:step>
+
+	</job>
+
+	<!-- Loading the data as per the interface id. -->
+	<bean id="b000061InitializeData" class="com.nissangroups.pd.b000061.main.B000061InitializationData" scope="step" />
+	
+	<!--Start  P0000.1 -->
+	<bean id="b61ReaderP0000.1"
+		class="org.springframework.batch.item.database.JpaPagingItemReader"
+		scope="step">
+		<property name="entityManagerFactory" ref="entityManagerFactory"></property>
+		<property name="queryString"
+			value="SELECT c FROM CmnInterfaceData c where c.cmnFileHdr.id.ifFileId IN (SELECT m.receiveIfFileId FROM MstInterface m where m.ifFileId ='#{jobParameters['S_INTERFACE_FILE_ID']}') AND c.id.seqNo IN (SELECT MAX(d.id.seqNo) from CmnFileHdr d where d.id.ifFileId='#{jobExecutionContext['R_INTERFACE_FILE_ID']}' AND d.stts='#{jobExecutionContext['CMN_FILE_STTS']}')">
+		</property>
+	</bean>
+	<bean id="b61ProcessorP0000.1"	class="com.nissangroups.pd.b000061.processor.B000061ProcessorP0000"	scope="step">	
+		<property name="sendInterfaceId" value="#{jobParameters['S_INTERFACE_FILE_ID']}" />
+		<property name="maxSeqNo" value="#{jobExecutionContext['MAX_SEQ_NO']}" />
+	</bean>
+			
+	<bean id="b61WriterP0000.1" class="org.springframework.batch.item.database.JpaItemWriter">
+		<property name="entityManagerFactory" ref="entityManagerFactory"></property>
+	</bean>
+	<!-- END of P0000.1 -->
+	
+	
+	<!--Start  P0001 -->
+	<bean id="P0001Listener" class="com.nissangroups.pd.b000061.util.B000061P0001Listener" scope="step"></bean>
+	 <bean id="b61ReaderP0001"
+		class="org.springframework.batch.item.database.JpaPagingItemReader"
+		scope="step">
+		<property name="entityManagerFactory" ref="entityManagerFactory"></property>
+		<property name="queryString"	value="#{jobExecutionContext['DYNAMIC_QUERY']}">
+		</property>
+	</bean>
+		
+	<bean id="b61rocessorP0001"	class="com.nissangroups.pd.b000061.processor.B000061ProcessorP0001"	scope="step"/>
+	
+	<!-- ItemWriter writes a line into output flat file -->
+    <bean id="flatFileItemWriter" class="org.springframework.batch.item.file.FlatFileItemWriter"
+        scope="step">
+       <!--  <property name="resource" value="file:D:/Public/send.txt" />  -->
+       <property name="resource" value="file:#{jobExecutionContext['FIX_LENTH_FILE_NAME']}" />
+       <property name="lineSeparator" value="&#13;" />
+        <property name="lineAggregator"> 
+            <!-- An Aggregator which converts an object into delimited list of strings -->
+            <bean class="org.springframework.batch.item.file.transform.FormatterLineAggregator">
+				<property name="fieldExtractor">
+               		 <bean class="org.springframework.batch.item.file.transform.BeanWrapperFieldExtractor">
+                 	 	 <property name="names" value="#{jobExecutionContext['COLS']}" /> 
+                	 </bean>
+            	</property>
+            	<property name="format" value="#{jobExecutionContext['FIX_LENTH_FORMAT']}" />
+            </bean>
+        </property>
+    </bean>
+	
+	<!-- End of P0001  -->
+	
+	
+	<!--Start  Control File Generator -->
+	<bean id="ctrlFileListener" class="com.nissangroups.pd.b000061.util.B000061CtrlListener" scope="step"></bean>
+	
+	 <bean id="b61ReaderCtrlFile"
+		class="org.springframework.batch.item.database.JpaPagingItemReader"
+		scope="step">
+		<property name="entityManagerFactory" ref="entityManagerFactory"></property>
+		<property name="queryString"
+			value="SELECT m FROM MstCtrlFileDetail m WHERE m.ifFileId = '#{jobParameters['S_INTERFACE_FILE_ID']}'">
+		</property>
+	</bean>
+		
+	<bean id="b61rocessorCtrlFile"	class="com.nissangroups.pd.b000061.processor.B000061ProcessorCtrlFile"	scope="step"/>
+	
+	<!-- ItemWriter writes a line into output flat file -->
+    <bean id="ctrlFileFlatFileItemWriter" class="org.springframework.batch.item.file.FlatFileItemWriter"
+        scope="step">
+        <property name="resource" value="file:#{jobExecutionContext['CTRL_FIX_LENTH_FILE_NAME']}" /> 
+        <property name="lineAggregator"> 
+            <!-- An Aggregator which converts an object into delimited list of strings -->
+            <bean class="org.springframework.batch.item.file.transform.FormatterLineAggregator">
+				<property name="fieldExtractor">
+               		 <bean class="org.springframework.batch.item.file.transform.BeanWrapperFieldExtractor">
+                 	 	<property name="names" value="ctrlFileCharCode,sndr,rcevr,fileRcgnzCode,processClass,cmprssnClass,code,kanji,recrdFrmtFixVariable,recrd_FrmtNewLineCode,infoType,desc,dateAttri,timeStamp,rsrvArea,newLineCode" /> 
+                	 </bean>
+            	</property>
+            	<property name="format" value="%-1s%-16s%-16s%-8s%-1s%-1s%-1s%-1s%-1s%-1s%-1s%-18s%-10s%-14s%-36s%-2s" />
+            </bean>
+        </property>
+    </bean>
+	
+	<!-- End of Control File Generator  -->
+	
+	<!--Start  P0002 -->
+	<bean id="MoveFileTasklet" class="com.nissangroups.pd.b000061.util.B000061UpdateTasklet" scope="step"></bean>	
+	<!-- End of P0002  -->
+	
+	<bean id="ctrlFileFlagDecider"	class="com.nissangroups.pd.b000061.processor.B000061CtrlFileDecider" />
+	
+	<bean id="ifcommonutility" class="com.nissangroups.pd.util.IfCommonUtil"></bean>
+	
+	<bean id="B61commonutility"
+		class="com.nissangroups.pd.b000061.util.B000061CommonUtilityService"></bean>
+</beans>

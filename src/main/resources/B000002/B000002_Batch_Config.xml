@@ -1,0 +1,270 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:aop="http://www.springframework.org/schema/aop" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:tx="http://www.springframework.org/schema/tx" xmlns:task="http://www.springframework.org/schema/task"
+	xmlns:util="http://www.springframework.org/schema/util" xmlns:batch="http://www.springframework.org/schema/batch"
+	xsi:schemaLocation="  
+             http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd  
+             http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd  
+             http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd  
+             http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd  
+             http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd  
+             http://www.springframework.org/schema/batch http://www.springframework.org/schema/batch/spring-batch.xsd  
+             http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task.xsd">
+
+	<import resource="../Config/spring-context-orm.xml" />
+
+	<bean id="transactionManager" class="org.springframework.orm.jpa.JpaTransactionManager">
+		<property name="entityManagerFactory" ref="entityManagerFactory" />
+		<property name="dataSource" ref="dataSource" />
+	</bean>
+	<bean id="persistenceAnnotation"
+		class="org.springframework.orm.jpa.support.PersistenceAnnotationBeanPostProcessor" />
+	<tx:annotation-driven transaction-manager="transactionManager" />
+	<bean id="jobRepository"
+		class="org.springframework.batch.core.repository.support.MapJobRepositoryFactoryBean">
+		<property name="transactionManager" ref="transactionManager" />
+		<property name="isolationLevelForCreate" value="ISOLATION_DEFAULT" />
+	</bean>
+	<bean id="jobLauncher"
+		class="org.springframework.batch.core.launch.support.SimpleJobLauncher">
+		<property name="jobRepository" ref="jobRepository" />
+	</bean>
+
+	<!-- Job Configuration Details Starts -->
+	<!-- Batch Function ID : B000002 - Create Spec Masters -->
+	<batch:job id="CreateSpecMsts">
+
+
+
+		<!-- Step Id : 1 Process ID : P0002 Process Name : Create MST_OEI_SPEC 
+			Data Next Process : P0003 - Create MST_OEI_BUYER Data -->
+
+		<batch:step id="OEISpecMstCreation">
+			<batch:tasklet>
+				<batch:chunk reader="endItemSpecDetailsReader"
+					processor="endItemSpecDetailsProcessor" writer="oeiSpecMstWriter"
+					commit-interval="10000" />
+
+			</batch:tasklet>
+			<batch:next on="STOPPED" to="stopBatch" />
+			<batch:next on="COMPLETED" to="OEIBuyerMstCreation" />
+
+		</batch:step>
+
+		<batch:step id="stopBatch">
+			<batch:tasklet>
+				<batch:chunk reader="stopBatchReader" writer="noOperationWriter"
+					commit-interval="1" />
+			</batch:tasklet>
+
+		</batch:step>
+
+		<!-- Step Id : 2 Process ID : P0003 Process Name : Create MST_OEI_BUYER 
+			Data Next Process : P0004 - Create MST_OSEI Data -->
+
+		<batch:step id="OEIBuyerMstCreation" next="OSEIMstCreation">
+			<batch:tasklet>
+				<batch:chunk reader="endItemBuyerDetailsReader"
+					processor="endItemBuyerDetailsProcessor" writer="oeiBuyerMstWriter"
+					commit-interval="10000" />
+			</batch:tasklet>
+		</batch:step>
+
+		<!-- Step Id : 3 Process ID : P0004 Process Name : Create MST_OSEI Data 
+			Next Process : P0005 - Create MST_OSEI_DTL Data -->
+
+		<batch:step id="OSEIMstCreation" next="OSEIDetailsMstCreation">
+			<batch:tasklet>
+				<batch:chunk reader="endItemColourCodeDetailsReader"
+					processor="endItemColorCodeDetailsProcessor" writer="oseiMstWriter"
+					commit-interval="10000" />
+			</batch:tasklet>
+		</batch:step>
+
+
+		<!-- Step Id : 4 Process ID : P0005 Process Name : Create MST_OSEI_DTL 
+			Data Next Process : P0006 - Create MST_OEI_OPTION SPC Data -->
+
+		<batch:step id="OSEIDetailsMstCreation" next="OEIOptionSpecCdMstCreation">
+			<batch:tasklet>
+				<batch:chunk reader="SalesendItemDetailsReader"
+					processor="SalesendItemDetailsProcessor" writer="oseiDetailsMstWriter"
+					commit-interval="10000" />
+			</batch:tasklet>
+		</batch:step>
+
+		<!-- Step Id : 5 Process ID : P0006 Process Name : Create MST_OEI_OPTION 
+			SPC Data Next Process : P0007 - Create MST_OEI_BYR_PRD Data -->
+
+		<batch:step id="OEIOptionSpecCdMstCreation" next="OEIBuyerPrdctnMstCreation">
+			<batch:tasklet>
+				<batch:chunk reader="endItemOptionSpecCdDetailsReader"
+					processor="endItemOptionSpecCdDetailsProcessor" writer="oeiOptionSpecCdMstWriter"
+					commit-interval="10000" />
+			</batch:tasklet>
+		</batch:step>
+
+		<!-- Step Id : 7 Process ID : P0007 Process Name : Create MST_OEI_BYR_PRD 
+			Data Next Process : P0008 - Create MST_INT_CLR Data -->
+
+		<batch:step id="OEIBuyerPrdctnMstCreation" next="InteriorColorCodeMstCreation">
+			<batch:tasklet>
+				<batch:chunk reader="endItemBuyerPrdctnDetailsReader"
+					writer="oeiBuyerPrdctnMstWriter" commit-interval="10000" />
+			</batch:tasklet>
+		</batch:step>
+
+		<!-- Step Id : 8 Process ID : P0008 Process Name : Create MST_INT_CLR Data 
+			Next Process : P0009 - Create MST_INT_CLR Data -->
+		<batch:step id="InteriorColorCodeMstCreation" next="OSEIDetailsMstupdation">
+			<batch:tasklet>
+				<batch:chunk reader="endItemInteriorColourCodeDetailsReader"
+					processor="endItemInteriorColourCodeDetailsProcessor" writer="InteriorColorCodeMstWriter"
+					commit-interval="10000" />
+			</batch:tasklet>
+		</batch:step>
+
+		<!-- Step Id : 9 Process ID : P0009 Process Name : Update OSEI_DTL using 
+			Month Order TRN data Data Next Process : P00010 - Update OSEI_DTL using Weekly 
+			order Trn Data -->
+		<batch:step id="OSEIDetailsMstupdation" next="OSEIDetailsMstupdationbsdOnWklyOrdrTrn">
+			<batch:tasklet>
+				<batch:chunk reader="OseiUpdateukOseiidDetReader"
+					writer="oseiDetailsMstupdateWriter" commit-interval="10000" />
+			</batch:tasklet>
+		</batch:step>
+
+		<!-- Step Id : 10 Process ID : P0010 Process Name : Update OSEI_DTL using 
+			Month Order TRN data Data Next Process : P00011 - Update OSEI_DTL using Ltst 
+			Mst Schdl Data -->
+		<batch:step id="OSEIDetailsMstupdationbsdOnWklyOrdrTrn"
+			next="OSEIDetailsMstupdationbsdOnLtstMstSchdlTrn">
+			<batch:tasklet>
+				<batch:chunk reader="OseiUpdateukOseiidDetReaderforWeekly"
+					writer="oseiDetailsMstupdateWriterbsdonWklyOrdrTrn"
+					commit-interval="10000" />
+			</batch:tasklet>
+		</batch:step>
+
+		<!-- Step Id : 11 Process ID : P0011 Process Name : Update OSEI_DTL using 
+			Month Order TRN data Data -->
+		<batch:step id="OSEIDetailsMstupdationbsdOnLtstMstSchdlTrn">
+			<batch:tasklet>
+				<batch:chunk reader="OseiUpdateukOseiidDetReaderforLtstMStrScdl"
+					writer="oseiDetailsMstupdateWriterbsdonLtstSChdlTrn"
+					commit-interval="10000" />
+			</batch:tasklet>
+		</batch:step>
+
+
+
+		<batch:listeners>
+			<batch:listener ref="CreateSpecMstJobExecutionListener" />
+		</batch:listeners>
+
+
+
+
+	</batch:job>
+
+	<!-- Job Configuration Details Ends -->
+
+	<!-- Job Beans Configuration Details Starts -->
+
+	<bean id="endItemSpecDetailsReader"
+		class="com.nissangroups.pd.reader.B000002EndItemSpecDetailsReader">
+	</bean>
+
+	<bean id="stopBatchReader" class="com.nissangroups.pd.reader.StopBatchClass">
+	</bean>
+
+	<bean id="noOperationWriter" class="com.nissangroups.pd.writer.NoOpItemWriter">
+	</bean>
+
+	<bean id="endItemSpecDetailsProcessor"
+		class="com.nissangroups.pd.processor.B000002EndItemSpecDetailsProcessor" />
+
+	<bean id="CreateSpecMstJobExecutionListener" class="com.nissangroups.pd.listeners.CommonJobExecutionListener" />
+
+	<bean id="oeiSpecMstWriter"
+		class="com.nissangroups.pd.writer.B000002OEndItemMstsDataWriter" />
+
+	<bean id="endItemBuyerDetailsReader"
+		class="com.nissangroups.pd.reader.B000002EndItemBuyerCodeDetailsReader">
+	</bean>
+
+	<bean id="endItemBuyerDetailsProcessor"
+		class="com.nissangroups.pd.processor.B000002EndItemBuyerCodeDetailsProcessor" />
+
+	<bean id="oeiBuyerMstWriter"
+		class="com.nissangroups.pd.writer.B000002OEndItemBuyerMstsDataWriter" />
+
+	<bean id="endItemColourCodeDetailsReader"
+		class="com.nissangroups.pd.reader.B000002EndItemColorCodeDetailsReader" />
+
+	<bean id="endItemColorCodeDetailsProcessor"
+		class="com.nissangroups.pd.processor.B000002EndItemColourCodeDetailsProcessor" />
+
+	<bean id="oseiMstWriter"
+		class="com.nissangroups.pd.writer.B000002OSalesEndItemMstDataWriter" />
+
+	<bean id="endItemInteriorColourCodeDetailsReader"
+		class="com.nissangroups.pd.reader.B000002EndItemInteriorColorCodeDetailsReader" />
+
+	<bean id="endItemInteriorColourCodeDetailsProcessor"
+		class="com.nissangroups.pd.processor.B000002EndItemInteriorColorCodeDetailsProcessor" />
+
+	<bean id="InteriorColorCodeMstWriter"
+		class="com.nissangroups.pd.writer.B000002InteriorColorMstDataWriter" />
+
+	<bean id="SalesendItemDetailsReader"
+		class="com.nissangroups.pd.reader.B000002EndItemDetailMstDataReader" />
+
+	<bean id="SalesendItemDetailsProcessor"
+		class="com.nissangroups.pd.processor.B000002EndItemDetailsProcessor" />
+
+	<bean id="oseiDetailsMstWriter"
+		class="com.nissangroups.pd.writer.B000002EndItemDetailsMstDataWriter" />
+
+	<bean id="endItemOptionSpecCdDetailsReader"
+		class="com.nissangroups.pd.reader.B000002EndItemOptionSpecCodeDetailsReader" />
+
+	<bean id="endItemOptionSpecCdDetailsProcessor"
+		class="com.nissangroups.pd.processor.B000002EndItemOptionSpecCodeDetailsProcessor" />
+
+	<bean id="oeiOptionSpecCdMstWriter"
+		class="com.nissangroups.pd.writer.B000002OEndItemOptionSpecCdMstDataWriter" />
+
+	<bean id="endItemBuyerPrdctnDetailsReader"
+		class="com.nissangroups.pd.reader.B000002OSEIBuyerPrdctnMstReader" />
+
+	<bean id="oeiBuyerPrdctnMstWriter"
+		class="com.nissangroups.pd.writer.B000002OSEIBuyerPrdctnMstWriter" />
+
+	<bean id="OseiUpdateukOseiidDetReader"
+		class="com.nissangroups.pd.reader.B000002OSEIUpdatedDetailsReader" />
+
+	<bean id="OseiUpdateukOseiidDetReaderforWeekly"
+		class="com.nissangroups.pd.reader.B000002UpdateReceivedOseiReader" />
+
+	<bean id="OseiUpdateukOseiidDetReaderforLtstMStrScdl"
+		class="com.nissangroups.pd.reader.B000002updtReceivedReaderforLtstMstrSchdl" />
+
+	<bean id="oseiDetailsMstupdateWriter"
+		class="com.nissangroups.pd.writer.B000002OSEISuspndAblshDtUpdtBasedonMonthlyOrdrTrn" />
+
+	<bean id="oseiDetailsMstupdateWriterbsdonWklyOrdrTrn"
+		class="com.nissangroups.pd.writer.B000002OSEISuspndAblshUpdtBasedonWklyOrdrTrn" />
+
+	<bean id="oseiDetailsMstupdateWriterbsdonLtstSChdlTrn"
+		class="com.nissangroups.pd.writer.B000002OSEISuspndAblshUpdtBasedOnLtstMStSchdl" />
+
+
+
+	<!-- Job Beans Configuration Details Ends -->
+
+</beans>
+  

@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:aop="http://www.springframework.org/schema/aop" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:tx="http://www.springframework.org/schema/tx" xmlns:task="http://www.springframework.org/schema/task"
+	xmlns:util="http://www.springframework.org/schema/util" xmlns:batch="http://www.springframework.org/schema/batch"
+	xsi:schemaLocation="  
+             http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.0.xsd  
+             http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-4.0.xsd  
+             http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.0.xsd  
+             http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.0.xsd  
+             http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.0.xsd  
+             http://www.springframework.org/schema/batch http://www.springframework.org/schema/batch/spring-batch-2.2.xsd  
+             http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-4.0.xsd">
+
+	<import resource="../Config/spring-context-orm.xml" />
+	<bean id="transactionManager" class="org.springframework.orm.jpa.JpaTransactionManager">
+		<property name="entityManagerFactory" ref="entityManagerFactory" />
+		<property name="dataSource" ref="dataSource" />
+	</bean>
+	<bean id="persistenceAnnotation"
+		class="org.springframework.orm.jpa.support.PersistenceAnnotationBeanPostProcessor" />
+	<tx:annotation-driven transaction-manager="transactionManager" />
+	<bean id="jobRepository"
+		class="org.springframework.batch.core.repository.support.MapJobRepositoryFactoryBean">
+		<property name="transactionManager" ref="transactionManager" />
+		<property name="isolationLevelForCreate" value="ISOLATION_DEFAULT" />
+	</bean>
+	<bean id="jobLauncher"
+		class="org.springframework.batch.core.launch.support.SimpleJobLauncher">
+		<property name="jobRepository" ref="jobRepository" />
+	</bean>
+	<bean id="b000005failureLoggerListener"
+		class="com.nissangroups.pd.listeners.CommonFailureLoggerListener"></bean>
+	<bean id="b000005jobExecutionListener"
+		class="com.nissangroups.pd.listeners.CommonJobExecutionListener">
+	</bean>
+
+	<batch:job id="B000028">
+		<batch:listeners>
+			<batch:listener ref="b000005jobExecutionListener" />
+		</batch:listeners>
+		<!-- Reader in this step used to extract the data as mentioned in the Process 
+			P0002 & P0003 OrderTakeBaseMonth and Minimum Year Month -->
+
+		<batch:step id="step1" next="step2">
+			<batch:tasklet>
+				<batch:listeners>
+					<batch:listener ref="b000005failureLoggerListener">
+					</batch:listener>
+				</batch:listeners>
+				<batch:chunk reader="b000028reader" processor="b000028BatchProcessor"
+					writer="noOpItemWriter" chunk-completion-policy="completionPolicy" />
+			</batch:tasklet>
+		</batch:step>
+
+		<batch:step id="step2" next="step3">
+			<batch:tasklet>
+				<batch:listeners>
+					<batch:listener ref="b000005failureLoggerListener"></batch:listener>
+				</batch:listeners>
+				<batch:chunk reader="R000004ReportReader" writer="R000004ReportWriter"
+					commit-interval="10000"></batch:chunk>
+			</batch:tasklet>
+		</batch:step>
+
+		<batch:step id="step3">
+			<batch:tasklet>
+				<batch:listeners>
+					<batch:listener ref="b000005failureLoggerListener"></batch:listener>
+				</batch:listeners>
+				<batch:chunk reader="R000005ReportReader" writer="R000005ReportWriter"
+					commit-interval="10000"></batch:chunk>
+			</batch:tasklet>
+		</batch:step>
+	</batch:job>
+
+
+	<bean id="b000028reader"
+		class="org.springframework.batch.item.database.JpaPagingItemReader"
+		scope="step">
+		<property name="entityManagerFactory" ref="entityManagerFactory"></property>
+		<property name="queryString"
+			value="SELECT max(m.id.ordrTakeBaseMnth) FROM MstMnthOrdrTakeBasePd m WHERE m.id.porCd = '#{jobParameters['POR_CD']}' and  
+			m.stageCd = '#{jobParameters['stageCode']}' and m.stageCd in ('F1','F2') and  m.stageSttsCd = 'C'"></property>
+	</bean>
+
+	<bean id="b000028BatchProcessor"
+		class="com.nissangroups.pd.b000028.processor.OrdrAdjstProcessor"
+		scope="step">
+		<property name="porCd" value="#{jobParameters['POR_CD']}" />
+		<property name="stgCd" value="#{jobParameters['stageCode']}" />
+	</bean>
+
+
+	<bean id="completionPolicy"
+		class="org.springframework.batch.repeat.policy.DefaultResultCompletionPolicy"></bean>
+
+	<bean id="customListWriter" class="com.nissangroups.pd.writer.JpaCustomListItemWriter">
+		<property name="entityManagerFactory" ref="entityManagerFactory" />
+	</bean>
+
+	<bean id="noOpItemWriter" class="com.nissangroups.pd.b000028.writer.NoOpItemWriter"></bean>
+
+	<bean id="R000004ReportReader" class="com.nissangroups.pd.b000028.reader.R000004ReportReader">
+	</bean>
+
+	<bean id="R000005ReportReader" class="com.nissangroups.pd.b000028.reader.R000005ReportReader">
+	</bean>
+
+
+
+	<bean id="R000004ReportWriter" class="org.springframework.batch.item.file.FlatFileItemWriter"
+		scope="step">
+		<property name="resource" value="file:#{jobExecutionContext['fileNamer4']}">
+		</property>
+		<property name="headerCallback" ref="headerCallback"></property>
+		<property name="shouldDeleteIfExists" value="true"></property>
+		<property name="lineAggregator">
+			<bean
+				class="org.springframework.batch.item.file.transform.DelimitedLineAggregator">
+				<property name="delimiter">
+					<util:constant
+						static-field="org.springframework.batch.item.file.transform.DelimitedLineTokenizer.DELIMITER_TAB" />
+				</property>
+				<property name="fieldExtractor">
+					<bean
+						class="org.springframework.batch.item.file.transform.BeanWrapperFieldExtractor">
+						<property name="names"
+							value="porCd,ordrTkBsMnth,prdMnth,ocfRgn,carSrs,byrGrp,byrCd,volAlloc,ordrQty,diff,autoAdjust,ordrQuanToPlnt,endItmApp,endItmPk,specCd,pot,extClr,intClr,exNo,
+							ordrQtyCs,autoAdjustCs,ordrQuanToPlntCs,recTypCd,comments"></property>
+					</bean>
+				</property>
+			</bean>
+		</property>
+	</bean>
+
+	<bean id="R000005ReportWriter" class="org.springframework.batch.item.file.FlatFileItemWriter"
+		scope="step">
+		<property name="resource" value="file:#{jobExecutionContext['fileNamer5']}">
+		</property>
+		<property name="headerCallback" ref="headerCallbackr5"></property>
+		<property name="shouldDeleteIfExists" value="true"></property>
+		<property name="lineAggregator">
+			<bean
+				class="org.springframework.batch.item.file.transform.DelimitedLineAggregator">
+				<property name="delimiter">
+					<util:constant
+						static-field="org.springframework.batch.item.file.transform.DelimitedLineTokenizer.DELIMITER_TAB" />
+				</property>
+				<property name="fieldExtractor">
+					<bean
+						class="org.springframework.batch.item.file.transform.BeanWrapperFieldExtractor">
+						<property name="names"
+							value="porCd, ordrTkBsMnth, prdMnth, ocfRgn, carSrs, byrGrp, ocfFeatCd, ocdDescShrt, ocfDescLng, ocfLmt, usage, diff"></property>
+					</bean>
+				</property>
+			</bean>
+		</property>
+	</bean>
+
+	<bean id="objR000004Report" class="com.nissangroups.pd.b000028.output.R000004ReportDao" />
+	<bean id="objR000005Report" class="com.nissangroups.pd.b000028.output.R000005ReportDao" />
+
+	<bean id="headerCallback" class="com.nissangroups.pd.b000028.util.R000004ReportHeader"></bean>
+	<bean id="headerCallbackr5" class="com.nissangroups.pd.b000028.util.R000005ReportHeader"></bean>
+
+	<bean id="objByrGrpLvlProcess" class="com.nissangroups.pd.b000028.process.ByrGrpLvlProcess"></bean>
+	<bean id="specRep" class="com.nissangroups.pd.repository.SpecRepository"></bean>
+	<bean id="objByrCdLvlProcess" class="com.nissangroups.pd.b000028.process.ByrCdLvlProcess"></bean>
+	<bean id="objAutoAdjustReport" class="com.nissangroups.pd.b000028.process.AutoAdjustReport"></bean>
+	<bean id="objClrLvlProcess" class="com.nissangroups.pd.b000028.process.ClrLvlProcess"></bean>
+	<bean id="objEndItmLvlProcess" class="com.nissangroups.pd.b000028.process.EndItmLvlProcess"></bean>
+	<bean id="objOCFBreachReport" class="com.nissangroups.pd.b000028.process.OCFBreachReport"></bean>
+	<bean id="objPotLvlProcess" class="com.nissangroups.pd.b000028.process.PotLvlProcess"></bean>
+	<bean id="objUpdtAutoAdjustProcess"
+		class="com.nissangroups.pd.b000028.process.UpdtAutoAdjustProcess"></bean>
+
+
+</beans>

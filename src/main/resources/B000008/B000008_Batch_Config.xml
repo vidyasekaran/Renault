@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:aop="http://www.springframework.org/schema/aop" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:tx="http://www.springframework.org/schema/tx" xmlns:task="http://www.springframework.org/schema/task"
+	xmlns:util="http://www.springframework.org/schema/util" xmlns:batch="http://www.springframework.org/schema/batch"
+	xsi:schemaLocation="  
+             http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.0.xsd  
+             http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-4.0.xsd  
+             http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.0.xsd  
+             http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.0.xsd  
+             http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.0.xsd  
+             http://www.springframework.org/schema/batch http://www.springframework.org/schema/batch/spring-batch-2.2.xsd  
+             http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-4.0.xsd">
+
+	<import resource="../Config/spring-context-orm.xml" />
+	<bean id="transactionManager" class="org.springframework.orm.jpa.JpaTransactionManager">
+		<property name="entityManagerFactory" ref="entityManagerFactory" />
+		<property name="dataSource" ref="dataSource" />
+	</bean>
+	<bean id="persistenceAnnotation"
+		class="org.springframework.orm.jpa.support.PersistenceAnnotationBeanPostProcessor" />
+	<tx:annotation-driven transaction-manager="transactionManager" />
+	<bean id="jobRepository"
+		class="org.springframework.batch.core.repository.support.MapJobRepositoryFactoryBean">
+		<property name="transactionManager" ref="transactionManager" />
+		<property name="isolationLevelForCreate" value="ISOLATION_DEFAULT" />
+	</bean>
+	<bean id="jobLauncher"
+		class="org.springframework.batch.core.launch.support.SimpleJobLauncher">
+		<property name="jobRepository" ref="jobRepository" />
+	</bean>
+	<batch:job id="B000008">
+		<batch:listeners>
+			<batch:listener ref="b000001jobExecutionListener" />
+		</batch:listeners>
+		<batch:step id="step1">
+			<batch:tasklet>
+				<batch:listeners>
+					<batch:listener ref="b000001failureLoggerListener">
+					</batch:listener>
+				</batch:listeners>
+				<batch:chunk reader="b8Reader" processor="b8processor"
+					writer="b8writer" commit-interval="10000" />
+			</batch:tasklet>
+		</batch:step>
+	</batch:job>
+
+	<bean id="b8processor"
+		class="org.springframework.batch.item.support.CompositeItemProcessor"
+		scope="step">
+		<property name="delegates">
+			<util:list>
+				<ref bean="ExtractOrdrTkBsMnthProcessor" />
+			   	<ref bean="InsertMnthlyOrdrProcessor" />
+			 	<ref bean="UpdateSuspendFlgProcessor" /> 
+			</util:list>
+		</property>
+
+	</bean>
+
+	<bean id="ExtractOrdrTkBsMnthProcessor"
+		class="com.nissangroups.pd.b000008.processor.ExtractOrdrTkBsMnthProcessor"
+		scope="step">
+		<property name="porCd" value="#{jobParameters['POR_CD']}" />
+		<property name="prdStgeCd" value="#{jobParameters['productionStageCode']}" />
+		<property name="updateOnlyFlg" value="#{jobParameters['updateOnlyFlag']}" />
+		<property name="overlapMsQtyFlg" value="#{jobParameters['overlap_ms_qty_flag']}" />
+	</bean>
+	<bean id="InsertMnthlyOrdrProcessor"
+		class="com.nissangroups.pd.b000008.processor.InsertMnthlyOrdrProcessor" scope="step">
+	</bean>
+	<bean id="UpdateSuspendFlgProcessor"
+		class="com.nissangroups.pd.b000008.processor.UpdateSuspendedFlgProcessor" scope="step">
+	</bean>
+
+
+	<bean id="b000001failureLoggerListener"
+		class="com.nissangroups.pd.listeners.CommonFailureLoggerListener"></bean>
+	<bean id="b000001jobExecutionListener"
+		class="com.nissangroups.pd.listeners.CommonJobExecutionListener">
+	</bean>
+	<bean id="b8Reader"
+		class="org.springframework.batch.item.database.JpaPagingItemReader"
+		scope="step">
+		<property name="entityManagerFactory" ref="entityManagerFactory"></property>
+		<property name="queryString"
+			value="SELECT m FROM MstMnthOrdrTakeBasePd m where m.id.porCd='#{jobParameters['POR_CD']}' and m.stageCd #{jobParameters['stageCode']}  )">
+		</property>
+	</bean>
+
+	<bean id="b8writer" class="com.nissangroups.pd.b000008.writer.NoOpItemWriter"></bean>
+
+    <bean id="objOverLapPrdProcess" class="com.nissangroups.pd.b000008.process.OverLapPrdProcess"></bean>
+    <bean id="objExtractHrznProcess" class="com.nissangroups.pd.b000008.process.ExtractHrznProcess"></bean>
+    <bean id="mnthRep" class="com.nissangroups.pd.repository.MnthlyOrdrRepository"></bean>
+    <bean id="objUpdatePrdStageCdProcess" class="com.nissangroups.pd.b000008.process.UpdatePrdStageCdProcess"></bean>
+    <bean id="objExtractMsQtyProcess" class="com.nissangroups.pd.b000008.process.ExtractMsQtyProcess"></bean>
+    <bean id="objExtractEndItmProcess" class="com.nissangroups.pd.b000008.process.ExtractEndItmProcess"></bean>
+    <bean id="objInsertMnthlyordrTrnProcess" class="com.nissangroups.pd.b000008.process.InsertMnthlyordrTrnProcess"></bean>
+    <bean id="objNscForecstVolProcess" class="com.nissangroups.pd.b000008.process.NscForecstVolProcess"></bean>
+    <bean id="objUpdateSuspendedProcess" class="com.nissangroups.pd.b000008.process.UpdateSuspendedProcess"></bean>
+    
+
+
+</beans> 
+

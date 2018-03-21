@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:aop="http://www.springframework.org/schema/aop" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:tx="http://www.springframework.org/schema/tx" xmlns:task="http://www.springframework.org/schema/task"
+	xmlns:util="http://www.springframework.org/schema/util" xmlns:batch="http://www.springframework.org/schema/batch"
+	xsi:schemaLocation="  
+             http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.0.xsd  
+             http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-4.0.xsd  
+             http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.0.xsd  
+             http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.0.xsd  
+             http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.0.xsd  
+             http://www.springframework.org/schema/batch http://www.springframework.org/schema/batch/spring-batch-2.2.xsd  
+             http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-4.0.xsd">
+
+	<import resource="../Config/spring-context-orm.xml" />
+
+	<job id="B000040" xmlns="http://www.springframework.org/schema/batch">
+
+		<step id="P0001">
+			<!-- Extract Order Take Base Period -->
+			<tasklet ref="OrderTakeBasePeriodTasklet">
+			</tasklet>
+			<next on="*" to="step2" />
+			<next on="FAILED" to="exceptionHandler" />
+		</step>
+		
+		<step id="step2">
+			
+			<tasklet>
+					<!-- <batch:listeners>				     
+						<batch:listener ref="multiFileAddtionStepListener" /> 
+					</batch:listeners> -->
+				<chunk reader="b000040reader" processor="b000040Processors"
+					writer="b000040Writer" commit-interval="10" />					
+			</tasklet>
+			<!-- <next on="*" to="attachFrozenSymbol" /> -->
+			<next on="*" to="attachExNoMapSymbolsCode" />
+			<next on="FAILED" to="exceptionHandler" />
+		</step>
+		
+		
+		 <!--Checking the Attach Frozen symbol with the extracted orders -->
+		<!-- <batch:decision decider="attachFrozenSymbolDecider" id="attachFrozenSymbol">
+			<batch:next on="true" to="attachFrozenStep" /> 
+			<batch:next on="false" to="attachProductionMethodCode" /> Go to next attachment.
+		</batch:decision> -->
+		
+		<!-- Attach Production method Code with the extracted Orders -->		
+		<!-- <batch:decision decider="attachProductionMethodCodeDecider" id="attachProductionMethodCode">
+			<batch:next on="true" to="attachProductionMethodCodeStep" />
+			<batch:next on="false" to="attachExNoMapSymbolsCode" />	Go to next attachment
+		</batch:decision> -->
+		
+		<!-- Attach EX-No, MAPS Symbols with the extracted Orders -->		
+		<batch:decision decider="attachExNoMapSymbolsCodeDecider" id="attachExNoMapSymbolsCode">
+			<batch:next on="true" to="attachExNoMapSymbolTrueStep" />
+			<batch:next on="false" to="attachExNoMapSymbolFalseStep" />			
+		</batch:decision>
+		
+		<!-- Attach service Parameter with the extracted Orders -->		
+		<batch:decision decider="attachServicePrmtrCodeDecider" id="attachServerPrmtrCode">
+			<batch:next on="true" to="attachServicePrmtrStep" />				
+		</batch:decision>
+		
+		
+		<!-- <step id="attachFrozenStep">
+			<tasklet>
+				<chunk reader="b000040OrderDtlsReader" processor="b000040OrderDtlsProcessors"
+					writer="b000040FrozenOrderDtlsWriter" commit-interval="10" />					
+			</tasklet>
+			<next on="*" to="attachProductionMethodCode" />
+			<next on="FAILED" to="exceptionHandler" />
+		</step>
+		
+		<step id="attachProductionMethodCodeStep">
+			<tasklet>
+				<chunk reader="b000040OrderDtlsReader" processor="b000040OrderDtlsProcessors"
+					writer="b000040ProductionMonthCodeOrderDtlsWriter" commit-interval="10" />					
+			</tasklet>
+			<next on="*" to="attachExNoMapSymbolsCode" />
+			<next on="FAILED" to="exceptionHandler" />
+		</step> -->
+		
+		<step id="attachExNoMapSymbolTrueStep">
+			<tasklet>
+				<chunk reader="b000040OrderDtlsReader" processor="b000040OrderDtlsProcessors"
+					writer="b000040ExNoMapSymbolTrueOrderDtlsWriter" commit-interval="10" />					
+			</tasklet>
+			<next on="*" to="attachServerPrmtrCode" />
+			<next on="FAILED" to="exceptionHandler" />
+		</step>
+		
+		<step id="attachExNoMapSymbolFalseStep">
+			<tasklet>
+				<chunk reader="b000040OrderDtlsReader" processor="b000040OrderDtlsProcessors"
+					writer="b000040ExNoMapSymbolFalseOrderDtlsWriter" commit-interval="10" />					
+			</tasklet>
+			<next on="*" to="attachServerPrmtrCode" />
+			<next on="FAILED" to="exceptionHandler" />
+		</step>
+		
+		<step id="attachServicePrmtrStep">
+			<tasklet>
+				<chunk reader="b000040OrderDtlsReader" processor="b000040OrderDtlsProcessors"
+					writer="b000040ServicePrmtrOrderDtlsWriter" commit-interval="10" />					
+			</tasklet>
+			 <next on="*" to="storeOrderInfo" />
+			<next on="FAILED" to="exceptionHandler" />
+		</step>
+		
+		
+		<step id="storeOrderInfo">
+			<tasklet ref="StoreOrderTasklet" />
+			<next on="*" to="completedHandler" />
+			<next on="FAILED" to="exceptionHandler" />
+		</step>
+		
+		<step id="wklyPrdnOrdr">
+			<tasklet ref="WklyProdOrdrTasklet" />
+			<next on="*" to="completedHandler" />
+			<next on="FAILED" to="exceptionHandler" />
+		</step>
+		
+
+		<step id="completedHandler">
+			<tasklet ref="CompletedHandlerTasklet" />
+		</step>
+
+		<step id="exceptionHandler">
+			<tasklet ref="ExceptionHandlerTasklet" />
+		</step>
+	</job>
+
+	<!-- Loading the data as per the interface id. -->
+
+	<bean id="OrderTakeBasePeriodTasklet"
+		class="com.nissangroups.pd.b000040.util.B000040OrderTakeBasePeriodTasklet"
+		scope="step" />
+		
+	<bean id="StoreOrderTasklet"
+		class="com.nissangroups.pd.b000040.util.B000040StoreOrderInfoTasklet"
+		scope="step" />
+		
+	<bean id="WklyProdOrdrTasklet"
+		class="com.nissangroups.pd.b000040.util.B000040WklyPrdnOrdrRprtTasklet"
+		scope="step" />	
+		
+	<bean id="CompletedHandlerTasklet"
+		class="com.nissangroups.pd.b000040.util.B000040CompletedHandlerTasklet"
+		scope="step" />
+
+	<bean id="ExceptionHandlerTasklet"
+		class="com.nissangroups.pd.b000040.util.B000040ExceptionHandlerTasklet"
+		scope="step" />
+		
+		
+	<bean id="b000040reader"
+		class="org.springframework.batch.item.database.JpaPagingItemReader"
+		scope="step">
+		<property name="entityManagerFactory" ref="entityManagerFactory"></property>
+		<property name="queryProvider" ref="b000042extraction">
+		</property>
+	</bean>
+	
+	<bean id="b000042extraction"
+		class="org.springframework.batch.item.database.orm.JpaNativeQueryProvider"
+		scope="step">
+		<property name="sqlQuery" value="#{jobExecutionContext['dynaQuery']}">
+		</property>
+		<property name="entityClass"
+			value="com.nissangroups.pd.b000040.output.B000040OrdrDtlsOutputBean"></property>
+	</bean>
+	
+	<bean id="b000040Processors"
+		class="com.nissangroups.pd.b000040.processor.B000040Processor"
+		scope="step">
+	</bean>
+	
+	<bean id="b000040Writer" class="com.nissangroups.pd.b000040.writer.B000040Writer" scope="step" />
+	
+	
+	<!-- Start:: Reader for Frozen Details Adding -->
+	
+	<bean id="b000040OrderDtlsReader"
+		class="org.springframework.batch.item.database.JpaPagingItemReader"
+		scope="step">
+		<property name="entityManagerFactory" ref="entityManagerFactory"></property>
+		<property name="queryProvider" ref="b000040Symbolextraction">
+		</property>
+	</bean>
+	
+	<bean id="b000040Symbolextraction"
+		class="org.springframework.batch.item.database.orm.JpaNativeQueryProvider"
+		scope="step">
+		<property name="sqlQuery" value="SELECT * FROM B000040OrdrDtlsOutputBean">
+		</property>
+		<property name="entityClass"
+			value="com.nissangroups.pd.b000040.output.B000040OrdrDtlsOutputBean"></property>
+	</bean>
+	
+	<bean id="b000040OrderDtlsProcessors"
+		class="com.nissangroups.pd.b000040.processor.B000040Processor"
+		scope="step">
+	</bean>
+	
+	<bean id="b000040FrozenOrderDtlsWriter" class="com.nissangroups.pd.b000040.writer.B000040AttachFrozenSymbolWriter" scope="step" />
+	<bean id="b000040ProductionMonthCodeOrderDtlsWriter" class="com.nissangroups.pd.b000040.writer.B000040AttachProductionMonthCodeWriter" scope="step" />
+	<bean id="b000040ExNoMapSymbolTrueOrderDtlsWriter" class="com.nissangroups.pd.b000040.writer.B000040AttachExNoMapSymbolsTrueWriter" scope="step" />
+	<bean id="b000040ExNoMapSymbolFalseOrderDtlsWriter" class="com.nissangroups.pd.b000040.writer.B000040AttachExNoMapSymbolsFalseWriter" scope="step" />
+	<bean id="b000040ServicePrmtrOrderDtlsWriter" class="com.nissangroups.pd.b000040.writer.B000040AttachServicePrmtrWriter" scope="step" />
+	
+	<!-- END:: Reader for Frozen Details Adding  -->
+	
+	
+					
+	<bean id="queryInputVO"
+		class="com.nissangroups.pd.b000040.util.B000040QueryInputVO"
+		/>		
+		
+	<bean id="queryDataService" class="com.nissangroups.pd.b000040.util.B000040QueryDataService" />
+	<bean id="commonutility" class="com.nissangroups.pd.util.IfCommonUtil"></bean>
+	
+	<!-- Attach Frozen symbol with the extracted orders-->
+	<bean id="attachFrozenSymbolDecider"	class="com.nissangroups.pd.b000040.decider.B000040AttachFrozenSymbolDecider" />
+	<bean id="attachProductionMethodCodeDecider"	class="com.nissangroups.pd.b000040.decider.B000040AttachFrozenSymbolDecider" />
+	<bean id="attachExNoMapSymbolsCodeDecider"	class="com.nissangroups.pd.b000040.decider.B000040AttachExNoMapSymbolDecider" />
+	<bean id="attachServicePrmtrCodeDecider"	class="com.nissangroups.pd.b000040.decider.B000040AttachServicePrmtrDecider" />
+
+</beans>

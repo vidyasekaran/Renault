@@ -1,0 +1,247 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:aop="http://www.springframework.org/schema/aop" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:tx="http://www.springframework.org/schema/tx" xmlns:task="http://www.springframework.org/schema/task"
+	xmlns:util="http://www.springframework.org/schema/util" xmlns:batch="http://www.springframework.org/schema/batch"
+	xsi:schemaLocation="  
+             http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.0.xsd  
+             http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-4.0.xsd  
+             http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.0.xsd  
+             http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.0.xsd  
+             http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.0.xsd  
+             http://www.springframework.org/schema/batch http://www.springframework.org/schema/batch/spring-batch-2.2.xsd  
+             http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-4.0.xsd">
+
+	<import resource="../Config/spring-context-orm.xml" />
+
+
+	<bean id="failureLoggerListener"
+		class="com.nissangroups.pd.listeners.CommonFailureLoggerListener"></bean>
+	<bean id="jobExecutionListener"
+		class="com.nissangroups.pd.listeners.CommonJobExecutionListener">
+	</bean>
+
+
+	<batch:job id="R000020">
+		<batch:listeners>
+			<batch:listener ref="jobExecutionListener" />
+
+		</batch:listeners>
+		<batch:step id="step1" next="step2">
+			<batch:tasklet>
+				<batch:listeners>
+					<batch:listener ref="failureLoggerListener">
+					</batch:listener>
+				</batch:listeners>
+				<batch:chunk reader="mnthlyScdlIFTrnReader" processor="compositeItemProcessor"
+					writer="NoOpItemWriter" commit-interval="1000" />
+			</batch:tasklet>
+		</batch:step>
+		<batch:step id="step2" next="step3">
+			<batch:tasklet>
+				<batch:listeners>
+					<batch:listener ref="failureLoggerListener">
+					</batch:listener>
+				</batch:listeners>
+				<batch:chunk reader="mnthlyScdlIFTrnDataReader"
+					processor="mnthlyScdlTrnProcessor" writer="jpaWriter"
+					commit-interval="1000" />
+			</batch:tasklet>
+		</batch:step>
+		<batch:step id="step3">
+			<batch:tasklet>
+				<batch:listeners>
+					<batch:listener ref="failureLoggerListener">
+					</batch:listener>
+				</batch:listeners>
+				<batch:chunk reader="mnthlyScdlIFTrnReader" processor="ErrorReportProcessor"
+					writer="NoOpItemWriter" commit-interval="1000" />
+			</batch:tasklet>
+		</batch:step>
+
+	</batch:job>
+
+
+
+	<bean id="mnthlyScdlTrnProcessor"
+		class="com.nissangroups.pd.r000020.processor.MnthlyScdlTrnProcessor"></bean>
+
+
+	<bean id="attachOseiIdProcessor"
+		class="com.nissangroups.pd.r000020.processor.AttachOseiIdProcessor"
+		scope="step">
+		<property name="porCd" value="#{jobParameters['porCd']}" />
+		<property name="ocfRgnCd" value="#{jobParameters['ocfRgnCd']}" />
+	</bean>
+
+
+	<bean id="compositeItemProcessor"
+		class="org.springframework.batch.item.support.CompositeItemProcessor"
+		scope="step">
+		<property name="delegates">
+			<util:list>
+				<ref bean="R000020Processor" />
+				<ref bean="noDataVldProcessor" />
+				<ref bean="porVldnProcessor" />
+				<ref bean="carSrsVldnProcessor" />
+				<ref bean="byrCdVldnProcessor" />
+				<ref bean="ocfRgnCdVldnProcessor" />
+				<ref bean="EndItmVldnProcessor" />
+				<ref bean="AdtnlSpecCdVldnProcessor" />
+				<ref bean="SpecDestCdVldnProcessor" />
+				<ref bean="ClrCdVldnProcessor" />
+				<ref bean="PotCdVldnProcessor" />
+				<ref bean="attachOseiIdProcessor" />
+				<ref bean="PrdMnthVldnProcessor" />
+				<ref bean="exNoVldnProcessor" />
+				<ref bean="frznVldnProcessor" />
+			</util:list>
+		</property>
+	</bean>
+
+	<bean id="ErrorReportProcessor"
+		class="com.nissangroups.pd.r000020.processor.ErrorReportProcessor"
+		scope="step">
+		<property name="porCd" value="#{jobParameters['porCd']}" />
+		<property name="ocfRgnCd" value="#{jobParameters['ocfRgnCd']}" />
+	</bean>
+	<bean id="frznVldnProcessor" class="com.nissangroups.pd.r000020.processor.FrznVldnProcessor"
+		scope="step">
+		<property name="errorCd" value="01" />
+	</bean>
+
+
+	<bean id="exNoVldnProcessor" class="com.nissangroups.pd.r000020.processor.ExNoVldnProcessor"
+		scope="step">
+		<property name="errorCd" value="15" />
+	</bean>
+
+	<bean id="porVldnProcessor" class="com.nissangroups.pd.r000020.processor.PorVldnProcessor"
+		scope="step">
+		<property name="errorCd" value="01" />
+	</bean>
+
+	<bean id="R000020Processor" class="com.nissangroups.pd.r000020.processor.R000020Processor"
+		scope="step">
+		<property name="porCd" value="#{jobParameters['porCd']}" />
+		<property name="ocfRgnCd" value="#{jobParameters['ocfRgnCd']}" />
+		<property name="tableName" value="#{jobParameters['tableName']}" />
+	</bean>
+
+	<bean id="noDataVldProcessor"
+		class="com.nissangroups.pd.r000020.processor.NoDataVldProcessor"
+		scope="step">
+		<property name="porCd" value="#{jobParameters['porCd']}" />
+		<property name="ocfRgnCd" value="#{jobParameters['ocfRgnCd']}" />
+		<property name="tableName" value="#{jobParameters['tableName']}" />
+	</bean>
+
+
+	<bean id="carSrsVldnProcessor"
+		class="com.nissangroups.pd.r000020.processor.CarSrsVldnProcessor"
+		scope="step">
+		<property name="errorCd" value="06" />
+	</bean>
+
+	<bean id="byrCdVldnProcessor"
+		class="com.nissangroups.pd.r000020.processor.ByrCdVldnProcessor"
+		scope="step">
+		<property name="errorCd" value="05" />
+	</bean>
+
+	<bean id="EndItmVldnProcessor"
+		class="com.nissangroups.pd.r000020.processor.EndItmVldnProcessor"
+		scope="step">
+		<property name="errorCd" value="09" />
+	</bean>
+
+	<bean id="AdtnlSpecCdVldnProcessor"
+		class="com.nissangroups.pd.r000020.processor.AdtnlSpecCdVldnProcessor"
+		scope="step">
+		<property name="errorCd" value="10" />
+	</bean>
+
+	<bean id="SpecDestCdVldnProcessor"
+		class="com.nissangroups.pd.r000020.processor.SpecDestCdVldnProcessor"
+		scope="step">
+		<property name="errorCd" value="11" />
+	</bean>
+
+	<bean id="ClrCdVldnProcessor"
+		class="com.nissangroups.pd.r000020.processor.ClrCdVldnProcessor"
+		scope="step">
+		<property name="errorCd" value="12" />
+	</bean>
+
+	<bean id="PotCdVldnProcessor"
+		class="com.nissangroups.pd.r000020.processor.PotCdVldnProcessor"
+		scope="step">
+		<property name="errorCd" value="13" />
+	</bean>
+
+	<bean id="ocfRgnCdVldnProcessor"
+		class="com.nissangroups.pd.r000020.processor.OcfRgnCdVldnProcessor"
+		scope="step">
+		<property name="errorCd" value="03" />
+	</bean>
+
+
+	<bean id="PrdMnthVldnProcessor"
+		class="com.nissangroups.pd.r000020.processor.PrdMnthVldnProcessor"
+		scope="step">
+		<property name="errorCd" value="14" />
+	</bean>
+
+
+
+	<bean id="mnthlyScdlIFTrnDataReader"
+		class="org.springframework.batch.item.database.JpaPagingItemReader"
+		scope="step">
+		<property name="entityManagerFactory" ref="entityManagerFactory"></property>
+		<property name="pageSize" value="1"></property>
+		<property name="queryString"
+			value="SELECT m FROM TrnMnthProdShdlIf m where m.id.porCd = '#{jobParameters['porCd']}'  and (m.errSttsCd = null or m.errSttsCd = '99') and trim(m.prtypeFlag) is null  "></property>
+	</bean>
+
+	<bean id="mnthlyScdlIFTrnReader"
+		class="org.springframework.batch.item.database.JpaPagingItemReader"
+		scope="step">
+		<property name="entityManagerFactory" ref="entityManagerFactory"></property>
+		<property name="pageSize" value="1"></property>
+		<property name="queryString"
+			value="SELECT m.id.ordrTakeBaseMnth FROM MstMnthOrdrTakeBasePd m where m.id.porCd = '#{jobParameters['porCd']}' and m.stageCd = '#{jobParameters['stageCd']}' and  m.stageSttsCd = 'C'"></property>
+	</bean>
+
+
+	<bean id="NoOpItemWriter" class="com.nissangroups.pd.r000020.writer.NoOpItemWriter"
+		scope="step">
+
+	</bean>
+
+
+	<bean id="ordrTkBsPrdMstRepositoryObj" class="com.nissangroups.pd.repository.OrdrTkBsPrdMstRepository">
+	</bean>
+
+	<bean id="porVldnRepositoryObj" class="com.nissangroups.pd.repository.VldnRepository">
+	</bean>
+
+
+	<bean id="mnthlySchdlIfTrnRepositoryObj"
+		class="com.nissangroups.pd.repository.MnthlySchdlIfTrnRepository">
+	</bean>
+
+
+	<bean id="frznVldnRepositoryObj" class="com.nissangroups.pd.repository.FrznVldnRepository">
+	</bean>
+
+
+
+	<bean id="wkNoCalendarRepositoryObj" class="com.nissangroups.pd.repository.WeekNoCalendarRepository">
+	</bean>
+
+	<bean id="jpaWriter" class="org.springframework.batch.item.database.JpaItemWriter">
+		<property name="entityManagerFactory" ref="entityManagerFactory"></property>
+
+	</bean>
+</beans>

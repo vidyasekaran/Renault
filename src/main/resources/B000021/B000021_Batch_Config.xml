@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:aop="http://www.springframework.org/schema/aop" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:tx="http://www.springframework.org/schema/tx" xmlns:task="http://www.springframework.org/schema/task"
+	xmlns:util="http://www.springframework.org/schema/util" xmlns:batch="http://www.springframework.org/schema/batch"
+	xsi:schemaLocation="  
+             http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.0.xsd  
+             http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-4.0.xsd  
+             http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.0.xsd  
+             http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.0.xsd  
+             http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.0.xsd  
+             http://www.springframework.org/schema/batch http://www.springframework.org/schema/batch/spring-batch-2.2.xsd  
+             http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-4.0.xsd">
+
+	<import resource="../Config/spring-context-orm.xml" />
+	
+	<bean id="b000021failureLoggerListener" class="com.nissangroups.pd.listeners.CommonFailureLoggerListener"></bean>
+	<bean id="b000021jobExecutionListener" class="com.nissangroups.pd.listeners.CommonJobExecutionListener"></bean>
+
+	<batch:job id="b000021">
+		<batch:listeners>
+			<batch:listener ref="b000021jobExecutionListener" />
+		</batch:listeners>
+
+		<batch:step id="step1" >
+			<batch:tasklet>
+				<batch:listeners>
+					<batch:listener ref="b000021failureLoggerListener">
+					</batch:listener>
+				</batch:listeners>
+				<batch:chunk reader="b000021CustomReader" processor="b000021CompositeItemProcessor"
+					writer="b000021Writer" commit-interval="10000"/>
+			</batch:tasklet>
+		</batch:step>
+		
+	</batch:job>
+
+	
+	<!-- Custom Reader for ORDER TAKE BASE MONTH EXTRACTION from MONTHLY_ORDER_TAKE_BASE_PERIOD_MST  [P0001] -->
+	
+	<bean id="b000021CustomReader" class="com.nissangroups.pd.b000021.reader.CustomOrdrTkBsMnthReader"
+		scope="step">
+		<property name="pageSize" value="10000"></property>
+		<property name="entityManagerFactory" ref="entityManagerFactory"></property>
+	</bean>
+	
+	<!--Reader End-->
+	
+	<!--Processor  for Extract the NSC,RHQ,Exporter Flag based on the POR and STAGE_CD [P0003]  -->
+	
+	<bean id="nscRhqExpFlgDtlsProcessor"
+		class="com.nissangroups.pd.b000021.processor.MstLckCnfgFlgDtlsProcessor"
+		scope="step">
+		<property name="jobParamPor" value="#{jobParameters['porCd']}" />
+		<property name="jobParamUpdtOnlyFlg" value="#{jobParameters['updateOnlyFlag']}" />
+		<property name="jobParamStgCd" value="#{jobParameters['stageCd']}" />
+		<property name="jobParamStgStsCd" value="#{jobParameters['stageStatusCd']}" />
+	</bean>
+	
+	<!--Processor  for Extract the Car series information [P0002]  and Store the Extracted information in Monthly Order Take Lock Mst [P0004] -->
+	<bean id="b000021Processor" 
+		class="com.nissangroups.pd.b000021.processor.MnthlyStgOpnClsProcessor"
+		scope="step">
+		<property name="jobParamPor" value="#{jobParameters['porCd']}" />
+		<property name="jobParamUpdtOnlyFlg" value="#{jobParameters['updateOnlyFlag']}" />
+		<property name="jobParamStgCd" value="#{jobParameters['stageCd']}" />
+		<property name="jobParamStgStsCd" value="#{jobParameters['stageStatusCd']}" />
+		<property name="jobParamSysLckFlg" value="#{jobParameters['systemLockFlag']}" />
+		<property name="jobParamStgUpdtFlg" value="#{jobParameters['stageUpdateFlag']}" />
+	</bean>
+	
+	<bean id="b000021CompositeItemProcessor"
+        class="org.springframework.batch.item.support.CompositeItemProcessor"
+        scope="step">
+        <property name="delegates">
+            <util:list>
+                <ref bean="nscRhqExpFlgDtlsProcessor" />
+               <ref bean="b000021Processor" />
+            </util:list>
+        </property>
+    </bean>
+	
+		
+	<!--Processor End  -->
+	
+		<!-- Writer to Update the Stage code and Stage Status Code in MONTHLY_ORDER_TAKE_BASE_PERIOD_MST [P0005] -->
+
+ 	 <bean id = "b000021Writer" class="com.nissangroups.pd.b000021.writer.MstMnthlyOrdrTkBsPrdWriter" scope="step"></bean>  
+ 	 
+ 	 <!--Writer End -->
+ 	 
+	<bean id = "mnthOpnClsRepo" class="com.nissangroups.pd.repository.MnthlyStgOpnClsRepository" ></bean> 
+	<bean id = "mnthOrdrRepo" class="com.nissangroups.pd.repository.MnthlyOrdrRepository" ></bean>  
+	
+</beans>
