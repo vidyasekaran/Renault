@@ -1,38 +1,4 @@
-/*
- * System Name       : Post Dragon 
- * Sub system Name : Batch
- * Function ID            : PST-DRG-B000014
- * Module                  : Ordering		
- * Process Outline     : RHQ/NSC wise Volume/OCF allocation															
- *
- * <Revision History>
- * Date       Name(Company Name)             Description 
- * ---------- ------------------------------ ---------------------
- * 6-11-2015  	  z015399(RNTBCI)               Initial Version
- *
- */
-package com.nissangroups.pd.b000014.main;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.springframework.batch.core.Job;
-import org.springframework.batch.core.JobExecution;
-import org.springframework.batch.core.JobParameters;
-import org.springframework.batch.core.JobParametersBuilder;
-import org.springframework.batch.core.launch.JobLauncher;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.support.ClassPathXmlApplicationContext;
-
-import com.nissangroups.pd.b000014.util.B000014Constants;
-import com.nissangroups.pd.util.PDConstants;
-import com.nissangroups.pd.util.PDMessageConsants;
-
-
-/**
- * Job Execution Main Class.
- *
- * @author z015399
- */
 
 public class B000014 {
 	
