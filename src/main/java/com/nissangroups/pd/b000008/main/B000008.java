@@ -1,32 +1,3 @@
-/*
- * System Name     :Post Dragon 
- * Sub system Name :Batch
- * Function ID     :PST-DRG-B000008
- * Module          : Monthly Ordering					
- * Process Outline :Create Monthly Order Base Data
- *
- * <Revision History>
- * Date       Name(Company Name)             Description 
- * ---------- ------------------------------ ---------------------
- * 21-10-2015  	  z015060(RNTBCI)               New Creation
- *
- */
-package com.nissangroups.pd.b000008.main;
-
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.springframework.batch.core.Job;
-import org.springframework.batch.core.JobParametersBuilder;
-import org.springframework.batch.core.launch.JobLauncher;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.support.ClassPathXmlApplicationContext;
-
-import com.nissangroups.pd.util.CommonUtil;
-import com.nissangroups.pd.util.PDConstants;
-
-import static com.nissangroups.pd.b000008.util.B000008Constants.*;
-import static com.nissangroups.pd.util.PDConstants.*;
 
 /**
  * The Class B000008.
